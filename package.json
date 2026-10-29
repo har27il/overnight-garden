@@ -1,0 +1,14 @@
+{
+  "name": "overnight-garden",
+  "version": "0.1.0",
+  "description": "A tiny garden that grows in your Claude Code status line while you're away.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test --test-reporter=spec"
+  }
+}
