@@ -13,8 +13,12 @@ export const GOLDEN_AGENT_RUN = 10 * MINUTE;
 
 export const PLANT_KINDS = ['flower', 'tree', 'rare-plant', 'golden-flower'];
 
-// A usable time: a number of milliseconds within the range a Date can hold.
-const isTime = (ms) => typeof ms === 'number' && !Number.isNaN(new Date(ms).getTime());
+// Times before 3 March 1973 (1e11 ms) are treated as mistakes: a time given in
+// seconds instead of milliseconds is about 1.8e9 today, far below it.
+const EARLIEST_TIME = 1e11;
+
+// A usable time: milliseconds since 1970, after EARLIEST_TIME, within the range a Date can hold.
+const isTime = (ms) => typeof ms === 'number' && ms >= EARLIEST_TIME && !Number.isNaN(new Date(ms).getTime());
 
 export function emptyGarden() {
   return { version: 1, plants: [] };

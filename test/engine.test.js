@@ -68,6 +68,12 @@ test('impossible times beyond the calendar grow nothing and break nothing', () =
   assert.equal(grow(emptyGarden(), { leftAt: farFuture, returnedAt: farFuture + 9 * HOUR }).plants.length, 0);
 });
 
+test('times in seconds instead of milliseconds grow nothing', () => {
+  const leftInSeconds = Math.floor(LEFT / 1000);
+  assert.deepEqual(plantsFor({ leftAt: leftInSeconds, returnedAt: LEFT + 9 * HOUR }), []);
+  assert.deepEqual(plantsFor({ leftAt: leftInSeconds, returnedAt: leftInSeconds + 9 * 60 * 60 }), []);
+});
+
 test('no absence given at all: nothing grows, nothing breaks', () => {
   assert.deepEqual(plantsFor(), []);
   const garden = emptyGarden();

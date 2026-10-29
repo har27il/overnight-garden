@@ -54,6 +54,25 @@ test('recording a night away reads the file once and hands back exactly what it 
   assert.deepEqual(returned, loadGarden(file));
 });
 
+test('saving waits and retries when Windows briefly holds the file, so the night is not lost', (t) => {
+  const file = join(folder('busy'), 'garden.json');
+  const realRename = fs.renameSync;
+  let refusals = 2;
+  t.mock.method(fs, 'renameSync', (from, to) => {
+    if (refusals-- > 0) throw Object.assign(new Error('EPERM: operation not permitted, rename'), { code: 'EPERM' });
+    return realRename(from, to);
+  });
+  syncBuiltinESMExports(); // Points store.js's renameSync import at the stand-in.
+  try {
+    recordAbsence(file, night);
+  } finally {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  }
+
+  assert.deepEqual(loadGarden(file).plants.map((plant) => plant.kind), ['flower', 'golden-flower']);
+});
+
 test('a damaged garden file is never wiped or overwritten', () => {
   const file = join(folder('damaged'), 'garden.json');
   mkdirSync(dirname(file), { recursive: true });
@@ -96,6 +115,18 @@ test('a garden file with an unknown plant type or a made-up date counts as damag
   }
 });
 
+test('loading keeps only the fields the garden knows about, so stray text never travels on', () => {
+  const file = join(folder('extra-fields'), 'garden.json');
+  recordAbsence(file, night);
+  const garden = JSON.parse(readFileSync(file, 'utf8'));
+  const stray = String.fromCharCode(27) + ']0;not part of the garden' + String.fromCharCode(7);
+  garden.title = stray;
+  garden.plants[0].label = stray;
+  writeFileSync(file, JSON.stringify(garden));
+
+  assert.deepEqual(loadGarden(file), { version: 1, plants: grow(emptyGarden(), night).plants });
+});
+
 test('a garden file saved by Notepad or PowerShell (with an invisible BOM marker) loads normally', () => {
   const file = join(folder('bom'), 'garden.json');
   recordAbsence(file, night);
@@ -114,7 +145,7 @@ test('a garden file saved by PowerShell 5.1 (UTF-16 format) loads normally', () 
 test('the code contains no invisible characters an editor could silently strip', () => {
   const repo = fileURLToPath(new URL('..', import.meta.url));
   const invisible = [0x200b, 0x200c, 0x200d, 0x2060, 0xfeff];
-  for (const dir of ['src', 'test']) {
+  for (const dir of ['src', 'test', 'scripts']) {
     for (const name of readdirSync(join(repo, dir))) {
       const text = readFileSync(join(repo, dir, name), 'utf8');
       const found = [...text].filter((char) => invisible.includes(char.codePointAt(0)));
