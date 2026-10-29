@@ -22,6 +22,10 @@ test('away 9 hours after a 12-minute agent run: a flower plus a golden flower', 
   assert.deepEqual(plantsFor(away(9 * HOUR, 12 * MINUTE)), ['flower', 'golden-flower']);
 });
 
+test('away exactly 8 hours after exactly a 10-minute agent run: a flower plus a golden flower', () => {
+  assert.deepEqual(plantsFor(away(8 * HOUR, 10 * MINUTE)), ['flower', 'golden-flower']);
+});
+
 test('away 9 hours after a 9-minute agent run: just a flower', () => {
   assert.deepEqual(plantsFor(away(9 * HOUR, 9 * MINUTE)), ['flower']);
 });
