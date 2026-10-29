@@ -75,17 +75,17 @@ test('the card script saves the card in ~/.claude/overnight-garden and prints wh
   assert.equal(plantCount(readFileSync(cardFile(home), 'utf8')), 4);
 });
 
-test('with a damaged garden file, the card script says why and saves an empty card', () => {
+test('with a damaged garden file, the card script says why and keeps the card you already had', () => {
   const home = newHome();
+  const env = { ...process.env, HOME: home, USERPROFILE: home };
+  saveGarden(gardenFile(home), garden());
+  assert.equal(spawnSync(process.execPath, [SCRIPT], { env }).status, 0);
   mkdirSync(gardenDir(home), { recursive: true });
   writeFileSync(gardenFile(home), '{ damaged');
-  const result = spawnSync(process.execPath, [SCRIPT], {
-    env: { ...process.env, HOME: home, USERPROFILE: home },
-    encoding: 'utf8',
-  });
 
-  assert.equal(result.status, 0);
+  const result = spawnSync(process.execPath, [SCRIPT], { env, encoding: 'utf8' });
+  assert.equal(result.status, 1);
   assert.match(result.stderr, /couldn't be read/);
-  assert.equal(plantCount(readFileSync(cardFile(home), 'utf8')), 0);
+  assert.equal(plantCount(readFileSync(cardFile(home), 'utf8')), 4);
   assert.equal(readFileSync(gardenFile(home), 'utf8'), '{ damaged');
 });

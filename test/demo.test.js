@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { awayOf, chapters, describeAbsence, isUserActivity } from '../scripts/demo-timeline.js';
+import { awayOf, chapters, describeAbsence } from '../scripts/demo-timeline.js';
+import { emptyPresence, HOOK_EVENTS, onHookEvent } from '../src/presence.js';
 
 const DEMO = fileURLToPath(new URL('../scripts/demo.js', import.meta.url));
 const MINUTE = 60 * 1000;
@@ -44,12 +45,16 @@ test('the demo describes each absence in plain words', () => {
   assert.equal(describeAbsence(byName['a year left alone']), 'away 365 days (10 Nov 2026 → 11 Nov 2027)');
 });
 
-test('outside the absences the demo is about, activity is never 8 hours apart', () => {
+test('replayed through the real presence code, only the absences the demo is about last 8+ hours', () => {
   const returns = new Set(chapters.map((chapter) => chapter.events.at(-1)));
-  const activity = events.filter(isUserActivity);
-  for (let i = 1; i < activity.length; i++) {
-    assert.ok(activity[i].at > activity[i - 1].at, 'events are in time order');
-    if (!returns.has(activity[i])) assert.ok(activity[i].at - activity[i - 1].at < 8 * HOUR, `gap before ${activity[i].at}`);
+  let presence = emptyPresence();
+  for (const [i, event] of events.entries()) {
+    if (i > 0) assert.ok(event.at > events[i - 1].at, 'events are in time order');
+    const result = onHookEvent(presence, HOOK_EVENTS[event.hook], event.at, { session_id: 'demo', ...event.input });
+    presence = result.presence;
+    if (result.absence && !returns.has(event)) {
+      assert.ok(result.absence.returnedAt - result.absence.leftAt < 8 * HOUR, `absence ending at ${event.at}`);
+    }
   }
 });
 

@@ -72,6 +72,24 @@ test('an agent that worked 12 minutes before you left adds a golden flower', () 
   assert.deepEqual(kinds(home), ['flower', 'golden-flower']);
 });
 
+test('an agent finishing in another window earns no golden flower', () => {
+  const home = newHome();
+  fire(home, 'prompt', MON_22H - HOUR, { session_id: 'window-a' });
+  fire(home, 'prompt', MON_22H, { session_id: 'window-b' });
+  fire(home, 'stop', MON_22H + 20 * MINUTE, { session_id: 'window-a' });
+  fire(home, 'prompt', MON_22H + 9 * HOUR, { session_id: 'window-b' });
+  assert.deepEqual(kinds(home), ['flower']);
+});
+
+test('an agent turn that finished before you were last here earns no golden flower', () => {
+  const home = newHome();
+  fire(home, 'prompt', MON_22H - 2 * HOUR);
+  fire(home, 'stop', MON_22H - 90 * MINUTE);
+  fire(home, 'session', MON_22H - HOUR, { source: 'startup' });
+  fire(home, 'prompt', MON_22H + 8 * HOUR);
+  assert.deepEqual(kinds(home), ['flower']);
+});
+
 test('opening Claude Code after a night away grows the flower straight away', () => {
   const home = newHome();
   fire(home, 'prompt', MON_22H);

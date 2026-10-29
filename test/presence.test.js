@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { agentStopped, emptyPresence, loadPresence, savePresence, userActive } from '../src/presence.js';
+import { agentStopped, emptyPresence, loadPresence, onHookEvent, savePresence, userActive } from '../src/presence.js';
 
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
@@ -41,7 +41,35 @@ test('opening a session marks you as here without starting an agent turn', () =>
   let { presence } = userActive(emptyPresence(), MON_22H, { prompted: true });
   presence = agentStopped(presence, MON_22H + 20 * MINUTE);
   presence = userActive(presence, MON_22H + HOUR).presence;
-  assert.deepEqual(presence, { lastSeenAt: MON_22H + HOUR, lastPromptAt: MON_22H, lastStopAt: MON_22H + 20 * MINUTE });
+  assert.deepEqual(presence, {
+    lastSeenAt: MON_22H + HOUR,
+    lastPromptAt: MON_22H,
+    lastPromptSession: null,
+    lastStopAt: MON_22H + 20 * MINUTE,
+  });
+});
+
+test('an agent finishing in another window is not credited to your last prompt', () => {
+  let { presence } = userActive(emptyPresence(), MON_22H - HOUR, { prompted: true, session: 'window-a' });
+  presence = userActive(presence, MON_22H, { prompted: true, session: 'window-b' }).presence;
+  presence = agentStopped(presence, MON_22H + 20 * MINUTE, 'window-a');
+  const { absence } = userActive(presence, MON_22H + 9 * HOUR, { prompted: true, session: 'window-b' });
+  assert.equal(absence.agentRunMs, 0);
+});
+
+test('an agent turn that finished before you were last here does not count', () => {
+  let { presence } = userActive(emptyPresence(), MON_22H - 2 * HOUR, { prompted: true });
+  presence = agentStopped(presence, MON_22H - 90 * MINUTE);
+  presence = userActive(presence, MON_22H - HOUR).presence;
+  const { absence } = userActive(presence, MON_22H + 9 * HOUR, { prompted: true });
+  assert.equal(absence.agentRunMs, 0);
+});
+
+test('compaction starting a session while you are away is not you coming back', () => {
+  const { presence } = onHookEvent(emptyPresence(), 'prompt', MON_22H, { session_id: 'a' });
+  const compacted = onHookEvent(presence, 'session', MON_22H + HOUR, { session_id: 'a', source: 'compact' });
+  assert.equal(compacted.presence, presence);
+  assert.equal(compacted.absence, null);
 });
 
 test('a stop with no prompt before it changes nothing', () => {
@@ -51,7 +79,7 @@ test('a stop with no prompt before it changes nothing', () => {
 
 test('presence saves and loads back in milliseconds', () => {
   const file = join(root, 'roundtrip', 'presence.json');
-  const presence = { lastSeenAt: MON_22H, lastPromptAt: MON_22H, lastStopAt: MON_22H + MINUTE };
+  const presence = { lastSeenAt: MON_22H, lastPromptAt: MON_22H, lastPromptSession: 'abc', lastStopAt: MON_22H + MINUTE };
   savePresence(file, presence);
   assert.deepEqual(loadPresence(file), presence);
 });

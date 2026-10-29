@@ -17,7 +17,7 @@ Most tools answer with more nudges: break reminders, streaks, badges for "produc
 | 8+ hours (a night) | 🌷 a flower |
 | 40+ hours (a weekend) | 🌳 a tree |
 | 5+ days (a real break) | 🍀 a rare plant |
-| Any 8+ hours, if the agent was still working 10+ minutes on your last prompt | 🌻 a golden flower as a bonus: hand off the work, then rest |
+| Any 8+ hours, if the agent kept working on your last prompt after you left, for 10+ minutes in all | 🌻 a golden flower as a bonus: hand off the work, then rest |
 
 - **Only time away grows anything.** Working more never earns a plant, and short breaks grow nothing.
 - **It never wilts, never resets, and never counts streaks.** A month off is rewarded, never punished. Plants are only ever added.
@@ -92,6 +92,7 @@ This puts your settings back exactly as they were before you installed. If you c
 
 - **Hooks.** Sending a prompt (`UserPromptSubmit`) or opening a session (`SessionStart`) means you're here. `Stop` means the agent finished its turn. When you come back after time away, the engine works out what grew and saves it.
 - **Measuring time away.** "Away" runs from your last prompt, in any Claude Code window, to when you're back. Sessions that start because the agent's context was compacted don't count as you being back.
+- **The golden flower.** It counts only the agent's turn on your last prompt, in that same window, and only if the agent was still working after you were last here.
 - **Files.** Everything lives in `~/.claude/overnight-garden/`:
   - `garden.json`: your plants.
   - `presence.json`: when you were last here.
@@ -123,6 +124,8 @@ The tests only ever use throwaway home folders, never your real `~/.claude`.
 
 - Time away is counted from your last prompt. If you read the agent's answer for an hour before leaving, that hour counts as away.
 - There's one garden per computer account, shared by every Claude Code window.
+- Automated `claude -p` runs, such as a nightly job, also trigger the hooks, so they count as you being here.
+- Two windows' hooks firing in the very same instant could, rarely, undo each other's last update.
 - Tested on Windows 11 with Node.js 24. The demo and tests run the installed commands exactly as they're written into `settings.json`, with the same kind of input Claude Code sends.
 
 ## License

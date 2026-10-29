@@ -1,6 +1,8 @@
 // The five stretches of life the demo plays out, in UTC. Every time is in
 // milliseconds since 1970, which is what the hooks and the engine expect.
 
+import { emptyPresence, HOOK_EVENTS, onHookEvent } from '../src/presence.js';
+
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
@@ -51,17 +53,15 @@ export const chapters = [
   },
 ];
 
-/** True for events that mean the user is here: a prompt, or opening a session. */
-export const isUserActivity = (event) =>
-  event.hook === 'UserPromptSubmit' || (event.hook === 'SessionStart' && event.input?.source !== 'compact');
-
-/** The absence a chapter ends with: from the last activity to the return, in milliseconds. */
+/** The absence a chapter ends with, worked out by the real presence code, in milliseconds. */
 export function awayOf(chapter) {
-  const returned = chapter.events.at(-1);
-  const left = chapter.events.slice(0, -1).filter(isUserActivity).at(-1);
-  const stopped = chapter.events.filter((event) => event.hook === 'Stop' && event.at >= left.at).at(-1);
-  const agentRunMs = left.hook === 'UserPromptSubmit' && stopped ? stopped.at - left.at : 0;
-  return { leftAt: left.at, returnedAt: returned.at, agentRunMs };
+  let presence = emptyPresence();
+  let absence = null;
+  for (const event of chapter.events) {
+    const input = { session_id: 'demo', ...event.input };
+    ({ presence, absence } = onHookEvent(presence, HOOK_EVENTS[event.hook], event.at, input));
+  }
+  return absence;
 }
 
 const weekdayTime = new Intl.DateTimeFormat('en-GB', {

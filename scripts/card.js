@@ -2,7 +2,6 @@
 // prints where it is: node scripts/card.js
 
 import { pathToFileURL } from 'node:url';
-import { emptyGarden } from '../src/engine.js';
 import { cardFile, gardenFile } from '../src/paths.js';
 import { cardHtml } from '../src/render.js';
 import { loadGarden, writeFileAtomic } from '../src/store.js';
@@ -11,8 +10,9 @@ let garden;
 try {
   garden = loadGarden(gardenFile());
 } catch (err) {
-  console.error(`The card shows an empty garden because the garden file couldn't be read. ${err.message}`);
-  garden = emptyGarden();
+  // Keep whatever card you already have rather than replace it with an empty one.
+  console.error(`Your garden card was not updated, because the garden file couldn't be read. ${err.message}`);
+  process.exit(1);
 }
 
 const file = cardFile();

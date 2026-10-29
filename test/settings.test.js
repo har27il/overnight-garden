@@ -1,7 +1,8 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import fs, { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -92,6 +93,44 @@ test('installing twice adds nothing twice and keeps the first backup', () => {
   assert.equal(readFileSync(backupFile(home), 'utf8'), THEIR_SETTINGS);
   uninstall({ home });
   assert.deepEqual(readFileSync(settingsFile(home)), Buffer.from(THEIR_SETTINGS));
+});
+
+test('a settings file saved as UTF-16 by Windows PowerShell 5.1 installs, and comes back byte for byte', () => {
+  const utf16 = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(THEIR_SETTINGS, 'utf16le')]);
+  const home = newHome();
+  writeFileSync(settingsFile(home), utf16);
+
+  install({ home, repoDir: REPO });
+  assert.deepEqual(readSettings(home).permissions, { allow: ['Bash(npm test)'] });
+  uninstall({ home });
+  assert.deepEqual(readFileSync(settingsFile(home)), utf16);
+});
+
+test('a linked settings file stays linked: install and uninstall change the file it points to', (t) => {
+  const home = newHome();
+  const dotfiles = join(root, `dotfiles-${homes}`, 'settings.json');
+  mkdirSync(dirname(dotfiles), { recursive: true });
+  writeFileSync(dotfiles, THEIR_SETTINGS);
+  writeFileSync(settingsFile(home), 'stand-in for the link itself');
+  // Windows here can't create symlinks without admin rights, so the link is simulated
+  // by telling the code where settings.json points.
+  const realRealpath = fs.realpathSync;
+  t.mock.method(fs, 'realpathSync', (path, ...rest) =>
+    path === settingsFile(home) ? dotfiles : realRealpath(path, ...rest),
+  );
+  syncBuiltinESMExports();
+  try {
+    install({ home, repoDir: REPO });
+    assert.equal(readFileSync(settingsFile(home), 'utf8'), 'stand-in for the link itself');
+    assert.match(JSON.parse(readFileSync(dotfiles, 'utf8')).statusLine.command, /overnight-garden-statusline\.js/);
+
+    uninstall({ home });
+    assert.deepEqual(readFileSync(dotfiles), Buffer.from(THEIR_SETTINGS));
+    assert.equal(readFileSync(settingsFile(home), 'utf8'), 'stand-in for the link itself');
+  } finally {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  }
 });
 
 test('a settings file that is not valid JSON is left untouched and nothing is installed', () => {

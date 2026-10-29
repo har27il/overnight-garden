@@ -13,7 +13,7 @@ const isPlant = (plant) =>
 
 // Notepad and PowerShell can start a file with an invisible byte-order mark
 // (U+FEFF), and PowerShell 5.1 saves as UTF-16 by default.
-function decode(bytes) {
+export function decode(bytes) {
   const text = bytes[0] === 0xff && bytes[1] === 0xfe ? bytes.toString('utf16le', 2) : bytes.toString('utf8');
   return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
 }
@@ -67,8 +67,24 @@ export function writeFileAtomic(file, data) {
   const temp = `${file}.${process.pid}.tmp`;
   try {
     writeFileSync(temp, data);
-    renameSync(temp, file);
+    renameWithRetry(temp, file);
   } finally {
     rmSync(temp, { force: true });
+  }
+}
+
+// Windows can briefly refuse to replace a file that antivirus or the search
+// indexer has open, so a refused swap is retried a few times (half a second at most).
+const BUSY = new Set(['EPERM', 'EBUSY', 'EACCES']);
+const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+function renameWithRetry(from, to) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return renameSync(from, to);
+    } catch (err) {
+      if (attempt >= 5 || !BUSY.has(err.code)) throw err;
+      pause(50 * attempt);
+    }
   }
 }

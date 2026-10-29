@@ -2,15 +2,15 @@
 // settings file is backed up before the garden is added, and uninstalling puts it
 // back byte for byte, unless something else in it changed in the meantime.
 
-import { copyFileSync, existsSync, readFileSync, rmSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, realpathSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { backupFile, backupNoteFile, settingsFile } from './paths.js';
-import { writeFileAtomic } from './store.js';
+import { HOOK_EVENTS } from './presence.js';
+import { decode, writeFileAtomic } from './store.js';
 
 const HOOK_SCRIPT = 'overnight-garden-hook.js';
 const STATUS_SCRIPT = 'overnight-garden-statusline.js';
-const HOOK_EVENTS = { UserPromptSubmit: 'prompt', Stop: 'stop', SessionStart: 'session' };
 
 const isOurs = (command) =>
   typeof command === 'string' && (command.includes(HOOK_SCRIPT) || command.includes(STATUS_SCRIPT));
@@ -72,8 +72,7 @@ export function removeGarden(settings, original = {}) {
 function parseSettings(bytes, file) {
   let settings;
   try {
-    const text = bytes.toString('utf8');
-    settings = JSON.parse(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text);
+    settings = JSON.parse(decode(bytes));
   } catch {
     // Falls through to the error below.
   }
@@ -85,9 +84,13 @@ function parseSettings(bytes, file) {
 
 const writeSettings = (file, settings) => writeFileAtomic(file, JSON.stringify(settings, null, 2) + '\n');
 
+// settings.json can be a link (say, into a dotfiles folder): read and write the
+// file it points to, so the link itself is kept.
+const realFile = (file) => (existsSync(file) ? realpathSync(file) : file);
+
 /** Backs up ~/.claude/settings.json, then adds the garden to it. */
 export function install({ home, repoDir }) {
-  const file = settingsFile(home);
+  const file = realFile(settingsFile(home));
   const existed = existsSync(file);
   const current = existed ? parseSettings(readFileSync(file), file) : {};
 
@@ -100,12 +103,12 @@ export function install({ home, repoDir }) {
 
   const replacedStatusLine = current.statusLine !== undefined && !isOurs(current.statusLine?.command);
   writeSettings(file, addGarden(current, gardenCommands(repoDir)));
-  return { settings: file, backup: existed ? backupFile(home) : null, replacedStatusLine };
+  return { settings: settingsFile(home), backup: existed ? backupFile(home) : null, replacedStatusLine };
 }
 
 /** Takes the garden out of the settings; the garden itself is kept. */
 export function uninstall({ home }) {
-  const file = settingsFile(home);
+  const file = realFile(settingsFile(home));
   const note = existsSync(backupNoteFile(home)) ? JSON.parse(readFileSync(backupNoteFile(home), 'utf8')) : null;
   const backupBytes = note?.existed && existsSync(backupFile(home)) ? readFileSync(backupFile(home)) : null;
   const original = backupBytes ? parseSettings(backupBytes, backupFile(home)) : {};
@@ -118,10 +121,10 @@ export function uninstall({ home }) {
     else rmSync(file, { force: true });
     rmSync(backupFile(home), { force: true });
     rmSync(backupNoteFile(home), { force: true });
-    return { settings: file, restored: 'exactly' };
+    return { settings: settingsFile(home), restored: 'exactly' };
   }
 
   if (!isDeepStrictEqual(cleaned, current)) writeSettings(file, cleaned);
   const restored = !hasGarden(current) ? 'nothing-to-remove' : note ? 'kept-your-changes' : 'removed';
-  return { settings: file, restored, backup: backupBytes ? backupFile(home) : null };
+  return { settings: settingsFile(home), restored, backup: backupBytes ? backupFile(home) : null };
 }

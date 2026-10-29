@@ -54,6 +54,25 @@ test('recording a night away reads the file once and hands back exactly what it 
   assert.deepEqual(returned, loadGarden(file));
 });
 
+test('saving waits and retries when Windows briefly holds the file, so the night is not lost', (t) => {
+  const file = join(folder('busy'), 'garden.json');
+  const realRename = fs.renameSync;
+  let refusals = 2;
+  t.mock.method(fs, 'renameSync', (from, to) => {
+    if (refusals-- > 0) throw Object.assign(new Error('EPERM: operation not permitted, rename'), { code: 'EPERM' });
+    return realRename(from, to);
+  });
+  syncBuiltinESMExports(); // Points store.js's renameSync import at the stand-in.
+  try {
+    recordAbsence(file, night);
+  } finally {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  }
+
+  assert.deepEqual(loadGarden(file).plants.map((plant) => plant.kind), ['flower', 'golden-flower']);
+});
+
 test('a damaged garden file is never wiped or overwritten', () => {
   const file = join(folder('damaged'), 'garden.json');
   mkdirSync(dirname(file), { recursive: true });

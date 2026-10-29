@@ -8,7 +8,7 @@
 
 import { readFileSync } from 'node:fs';
 import { gardenFile, presenceFile } from './paths.js';
-import { agentStopped, loadPresence, savePresence, userActive } from './presence.js';
+import { loadPresence, onHookEvent, savePresence } from './presence.js';
 import { recordAbsence } from './store.js';
 
 // The demo and tests set OVERNIGHT_GARDEN_NOW (milliseconds) to simulate the clock.
@@ -29,14 +29,10 @@ function readInput() {
 
 function handle(event, input, at) {
   const file = presenceFile();
-  const presence = loadPresence(file);
-  if (event === 'stop') return savePresence(file, agentStopped(presence, at));
-  if (event !== 'prompt' && event !== 'session') return;
-  // Compaction can start a session while you're away, so it doesn't count as you being back.
-  if (event === 'session' && input.source === 'compact') return;
-
-  const { presence: next, absence } = userActive(presence, at, { prompted: event === 'prompt' });
-  savePresence(file, next);
+  const { presence, absence } = onHookEvent(loadPresence(file), event, at, input);
+  // Presence is saved first: if the garden can't be written (say it's damaged),
+  // the hours you were here never get counted as time away later.
+  savePresence(file, presence);
   if (absence) recordAbsence(gardenFile(), absence);
 }
 
