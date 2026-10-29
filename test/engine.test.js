@@ -62,6 +62,12 @@ test('clock says you came back before you left: nothing grows, nothing breaks', 
   assert.equal(grow(emptyGarden(), { leftAt: undefined, returnedAt: LEFT }).plants.length, 0);
 });
 
+test('impossible times beyond the calendar grow nothing and break nothing', () => {
+  const farFuture = 1e16; // Past the last date JavaScript can represent.
+  assert.deepEqual(plantsFor({ leftAt: farFuture, returnedAt: farFuture + 9 * HOUR }), []);
+  assert.equal(grow(emptyGarden(), { leftAt: farFuture, returnedAt: farFuture + 9 * HOUR }).plants.length, 0);
+});
+
 test('growing adds the plants to the garden, stamped with when you left and came back', () => {
   const garden = grow(emptyGarden(), away(9 * HOUR, 12 * MINUTE));
   assert.deepEqual(garden.plants, [
@@ -74,6 +80,16 @@ test('the same absence recorded twice still grows its plants only once', () => {
   const once = grow(emptyGarden(), away(9 * HOUR, 12 * MINUTE));
   const twice = grow(once, away(9 * HOUR, 12 * MINUTE));
   assert.equal(twice.plants.length, 2);
+});
+
+test('two Claude Code windows open on the same night grow its plants only once', () => {
+  const firstWindow = grow(emptyGarden(), away(9 * HOUR, 12 * MINUTE));
+  const secondWindow = grow(firstWindow, {
+    leftAt: LEFT + 5 * MINUTE,
+    returnedAt: LEFT + 9 * HOUR,
+    agentRunMs: 12 * MINUTE,
+  });
+  assert.deepEqual(secondWindow.plants.map((plant) => plant.kind), ['flower', 'golden-flower']);
 });
 
 test('a garden left alone for a year keeps every plant', () => {

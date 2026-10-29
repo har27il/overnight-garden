@@ -46,13 +46,43 @@ test('a damaged garden file is never wiped or overwritten', () => {
   assert.deepEqual(readFileSync(file), before);
 });
 
-test('saving fewer plants over a bigger garden is refused, so it can never reset', () => {
+test('a garden file with a blank or broken entry counts as damaged and is left untouched', () => {
+  const cases = { blank: '{"version":1,"plants":[null]}', broken: '{"version":1,"plants":[{"kind":"flower"}]}' };
+  for (const [name, text] of Object.entries(cases)) {
+    const file = join(folder(`entry-${name}`), 'garden.json');
+    saveGarden(file, emptyGarden());
+    writeFileSync(file, text);
+
+    assert.throws(() => loadGarden(file), /damaged/);
+    assert.throws(() => recordAbsence(file, night), /damaged/);
+    assert.equal(readFileSync(file, 'utf8'), text);
+  }
+});
+
+test('a garden file saved by Notepad or PowerShell (with an invisible BOM marker) loads normally', () => {
+  const file = join(folder('bom'), 'garden.json');
+  recordAbsence(file, night);
+  writeFileSync(file, '﻿' + readFileSync(file, 'utf8'));
+  assert.deepEqual(loadGarden(file).plants.map((plant) => plant.kind), ['flower', 'golden-flower']);
+});
+
+test('saving an empty garden over a full one keeps every plant, so it can never reset', () => {
   const file = join(folder('noreset'), 'garden.json');
   recordAbsence(file, night);
   const before = readFileSync(file);
 
-  assert.throws(() => saveGarden(file, emptyGarden()), /never removed/);
+  saveGarden(file, emptyGarden());
   assert.deepEqual(readFileSync(file), before);
+});
+
+test('two sessions saving from out-of-date copies keep both of their plants', () => {
+  const file = join(folder('race'), 'garden.json');
+  const sessionA = loadGarden(file);
+  const sessionB = loadGarden(file);
+
+  saveGarden(file, grow(sessionA, night));
+  saveGarden(file, grow(sessionB, { leftAt: LEFT + 100 * HOUR, returnedAt: LEFT + 150 * HOUR }));
+  assert.deepEqual(loadGarden(file).plants.map((plant) => plant.kind), ['flower', 'golden-flower', 'tree']);
 });
 
 test('saving leaves no temporary files behind', () => {

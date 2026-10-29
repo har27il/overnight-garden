@@ -11,6 +11,9 @@ export const TREE_AFTER = 40 * HOUR;
 export const RARE_PLANT_AFTER = 5 * DAY;
 export const GOLDEN_AGENT_RUN = 10 * MINUTE;
 
+// A usable time: a number of milliseconds within the range a Date can hold.
+const isTime = (ms) => typeof ms === 'number' && !Number.isNaN(new Date(ms).getTime());
+
 export function emptyGarden() {
   return { version: 1, plants: [] };
 }
@@ -23,7 +26,7 @@ export function emptyGarden() {
  * @returns {string[]} e.g. ['tree', 'golden-flower'], or [] if nothing grows.
  */
 export function plantsFor({ leftAt, returnedAt, agentRunMs = 0 }) {
-  if (!Number.isFinite(leftAt) || !Number.isFinite(returnedAt)) return [];
+  if (!isTime(leftAt) || !isTime(returnedAt)) return [];
   const away = returnedAt - leftAt;
   if (away < FLOWER_AFTER) return [];
 
@@ -34,16 +37,19 @@ export function plantsFor({ leftAt, returnedAt, agentRunMs = 0 }) {
 
 /**
  * Returns a new garden with this absence's plants added. Plants are only ever
- * added: nothing wilts, resets or depends on a streak. Recording the same
- * absence again adds nothing.
+ * added: nothing wilts, resets or depends on a streak. An absence that overlaps
+ * one already in the garden adds nothing, so a night recorded twice, or by two
+ * open sessions, grows once.
  */
 export function grow(garden, absence) {
   const kinds = plantsFor(absence);
   if (kinds.length === 0) return garden;
 
-  const leftAt = new Date(absence.leftAt).toISOString();
-  if (garden.plants.some((plant) => plant.leftAt === leftAt)) return garden;
+  const overlaps = (plant) =>
+    Date.parse(plant.leftAt) < absence.returnedAt && absence.leftAt < Date.parse(plant.returnedAt);
+  if (garden.plants.some(overlaps)) return garden;
 
+  const leftAt = new Date(absence.leftAt).toISOString();
   const returnedAt = new Date(absence.returnedAt).toISOString();
   const grown = kinds.map((kind) => ({ kind, leftAt, returnedAt }));
   return { ...garden, plants: [...garden.plants, ...grown] };
