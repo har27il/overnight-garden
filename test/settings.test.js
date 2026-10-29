@@ -156,7 +156,7 @@ test('settings changed after installing are kept on uninstall, and so is the bac
   assert.equal(readFileSync(backupFile(home), 'utf8'), THEIR_SETTINGS);
 });
 
-test('uninstalling keeps the garden', () => {
+test('never resets: uninstalling keeps the garden', () => {
   const home = newHome(THEIR_SETTINGS);
   install({ home, repoDir: REPO });
   const garden = grow(emptyGarden(), { leftAt: Date.parse('2026-11-02T22:00:00Z'), returnedAt: Date.parse('2026-11-03T07:00:00Z') });
@@ -166,7 +166,7 @@ test('uninstalling keeps the garden', () => {
   assert.deepEqual(loadGarden(gardenFile(home)), garden);
 });
 
-test('the installed commands run from a shell, as Claude Code runs them', () => {
+test('nothing faked: the installed commands run from a shell, exactly as Claude Code runs them', () => {
   const home = newHome();
   install({ home, repoDir: REPO });
   const settings = readSettings(home);

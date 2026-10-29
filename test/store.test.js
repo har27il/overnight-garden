@@ -22,7 +22,7 @@ test('no garden file yet: starts with an empty garden', () => {
   assert.deepEqual(loadGarden(join(folder('fresh'), 'garden.json')), emptyGarden());
 });
 
-test('a saved garden loads back exactly the same', () => {
+test('nothing is lost: a saved garden loads back exactly as it was', () => {
   const file = join(folder('roundtrip'), 'garden.json');
   const garden = grow(emptyGarden(), night);
   saveGarden(file, garden);
@@ -142,7 +142,7 @@ test('a garden file saved by PowerShell 5.1 (UTF-16 format) loads normally', () 
   assert.deepEqual(loadGarden(file).plants.map((plant) => plant.kind), ['flower', 'golden-flower']);
 });
 
-test('the code contains no invisible characters an editor could silently strip', () => {
+test('nothing hidden: the code contains no invisible characters, so what you read is what runs', () => {
   const repo = fileURLToPath(new URL('..', import.meta.url));
   const invisible = [0x200b, 0x200c, 0x200d, 0x2060, 0xfeff];
   for (const dir of ['src', 'test', 'scripts', 'tools']) {
@@ -210,7 +210,7 @@ test('two windows saving the same night at the same moment count it once', () =>
   assert.deepEqual(loadGarden(file).plants.map((plant) => plant.kind), ['flower', 'golden-flower']);
 });
 
-test('saving leaves no temporary files behind', () => {
+test('saving leaves nothing behind except the garden file', () => {
   const dir = folder('tidy');
   const file = join(dir, 'garden.json');
   recordAbsence(file, night);

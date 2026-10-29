@@ -50,7 +50,7 @@ test('an empty garden shows a calm line, not a nudge', () => {
   assert.equal(statusLine(emptyGarden()), '🌱 Overnight Garden · grows while you rest');
 });
 
-test('the line counts each kind of plant, in a fixed order', () => {
+test('the status line counts each kind of plant, in a fixed order', () => {
   assert.equal(statusLine(fullGarden()), '🌱 Overnight Garden · 🌷 2  🌳 1  🍀 1  🌻 1');
 });
 

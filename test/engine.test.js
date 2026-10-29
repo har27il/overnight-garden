@@ -68,7 +68,7 @@ test('impossible times beyond the calendar grow nothing and break nothing', () =
   assert.equal(grow(emptyGarden(), { leftAt: farFuture, returnedAt: farFuture + 9 * HOUR }).plants.length, 0);
 });
 
-test('times in seconds instead of milliseconds grow nothing', () => {
+test('times are in milliseconds: times given in seconds grow nothing', () => {
   const leftInSeconds = Math.floor(LEFT / 1000);
   assert.deepEqual(plantsFor({ leftAt: leftInSeconds, returnedAt: LEFT + 9 * HOUR }), []);
   assert.deepEqual(plantsFor({ leftAt: leftInSeconds, returnedAt: leftInSeconds + 9 * 60 * 60 }), []);
@@ -86,7 +86,7 @@ test('null instead of an absence: nothing grows, nothing breaks', () => {
   assert.equal(grow(garden, null), garden);
 });
 
-test('growing adds the plants to the garden, stamped with when you left and came back', () => {
+test('each plant remembers when you left and when you came back', () => {
   const garden = grow(emptyGarden(), away(9 * HOUR, 12 * MINUTE));
   assert.deepEqual(garden.plants, [
     { kind: 'flower', leftAt: '2026-10-29T22:00:00.000Z', returnedAt: '2026-10-30T07:00:00.000Z' },
@@ -126,7 +126,7 @@ test('one bad clock reading never stops later nights from growing', () => {
   assert.deepEqual(nextNight.plants.map((plant) => plant.kind), ['rare-plant', 'flower']);
 });
 
-test('a garden left alone for a year keeps every plant', () => {
+test('never wilts: a garden left alone for a year keeps every plant', () => {
   const lastYear = grow(emptyGarden(), away(40 * HOUR));
   const yearLater = LEFT + 365 * DAY;
   const garden = grow(lastYear, { leftAt: yearLater, returnedAt: yearLater + 9 * HOUR });
@@ -134,12 +134,12 @@ test('a garden left alone for a year keeps every plant', () => {
   assert.deepEqual(garden.plants[0], lastYear.plants[0]);
 });
 
-test('a short absence leaves the garden exactly as it was', () => {
+test('short breaks change nothing: the garden stays exactly as it was', () => {
   const garden = grow(emptyGarden(), away(40 * HOUR));
   assert.equal(grow(garden, { leftAt: LEFT + 50 * HOUR, returnedAt: LEFT + 51 * HOUR }), garden);
 });
 
-test('growing never changes the garden it was given', () => {
+test('never resets: growing new plants leaves every earlier plant untouched', () => {
   const garden = grow(emptyGarden(), away(9 * HOUR));
   const snapshot = structuredClone(garden);
   grow(garden, { leftAt: LEFT + DAY, returnedAt: LEFT + 3 * DAY });

@@ -71,7 +71,7 @@ const PAINTINGS = {
 };
 const count = (text, part) => text.split(part).length - 1;
 
-test('with paintings, each plant is shown as its watercolor, and each painting is stored once', () => {
+test('the card paints each plant in watercolor, storing each painting only once', () => {
   const html = cardHtml(garden(), PAINTINGS);
   assert.equal(plantCount(html), 4);
   assert.equal(count(html, '<span class="plant" data-plant="flower" role="img"'), 2);
@@ -81,7 +81,7 @@ test('with paintings, each plant is shown as its watercolor, and each painting i
   assert.ok(!html.includes('🌷'), 'no emoji when every plant has a painting');
 });
 
-test('paintings are only used for known plant types, and only if they are PNG images', () => {
+test('the card only shows paintings of known plant types, and only real PNG images', () => {
   const html = cardHtml(garden(), {
     flower: 'javascript:alert(1)',
     tree: 'data:image/png;base64,AAAA");background:red;("',
