@@ -36,7 +36,8 @@ export function loadGarden(file) {
   if (!Array.isArray(garden?.plants) || !garden.plants.every(isPlant)) {
     throw new Error(`Garden file ${file} is damaged; leaving it untouched.`);
   }
-  return garden;
+  // Keep only the fields the garden knows about, so stray text never travels on.
+  return { version: 1, plants: garden.plants.map(({ kind, leftAt, returnedAt }) => ({ kind, leftAt, returnedAt })) };
 }
 
 /** Adds a garden's plants to the file and returns the garden as saved. */
@@ -56,12 +57,16 @@ export function recordAbsence(file, absence) {
   return saveGarden(file, grow(emptyGarden(), absence));
 }
 
-// Writes a temporary file, then swaps it in, so a crash can't leave half a garden.
 function writeGarden(file, garden) {
+  writeFileAtomic(file, JSON.stringify(garden, null, 2) + '\n');
+}
+
+/** Writes a temporary file, then swaps it in, so a crash can't leave half a file. */
+export function writeFileAtomic(file, data) {
   mkdirSync(dirname(file), { recursive: true });
   const temp = `${file}.${process.pid}.tmp`;
   try {
-    writeFileSync(temp, JSON.stringify(garden, null, 2) + '\n');
+    writeFileSync(temp, data);
     renameSync(temp, file);
   } finally {
     rmSync(temp, { force: true });

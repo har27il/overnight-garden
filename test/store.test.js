@@ -96,6 +96,18 @@ test('a garden file with an unknown plant type or a made-up date counts as damag
   }
 });
 
+test('loading keeps only the fields the garden knows about, so stray text never travels on', () => {
+  const file = join(folder('extra-fields'), 'garden.json');
+  recordAbsence(file, night);
+  const garden = JSON.parse(readFileSync(file, 'utf8'));
+  const stray = String.fromCharCode(27) + ']0;not part of the garden' + String.fromCharCode(7);
+  garden.title = stray;
+  garden.plants[0].label = stray;
+  writeFileSync(file, JSON.stringify(garden));
+
+  assert.deepEqual(loadGarden(file), { version: 1, plants: grow(emptyGarden(), night).plants });
+});
+
 test('a garden file saved by Notepad or PowerShell (with an invisible BOM marker) loads normally', () => {
   const file = join(folder('bom'), 'garden.json');
   recordAbsence(file, night);
