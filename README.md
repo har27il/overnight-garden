@@ -1,6 +1,8 @@
 # Overnight Garden
 
-A small garden in your Claude Code status line that grows only while you're away.
+[![CI](https://github.com/har27il/overnight-garden/actions/workflows/ci.yml/badge.svg)](https://github.com/har27il/overnight-garden/actions/workflows/ci.yml)
+
+**It only grows while you're gone.** Overnight Garden is a small watercolor garden in your Claude Code status line, and it grows only while you're away.
 
 ```
 🌱 Overnight Garden · 🌷 2  🌳 1  🍀 1  🌻 1
@@ -13,11 +15,42 @@ A small garden in your Claude Code status line that grows only while you're away
   <img src="assets/plants/golden-flower.png" width="110" alt="Watercolor sunflower: the golden flower">
 </p>
 
-## Why it exists
+## In short
 
-AI agents compress weeks of work into hours. The danger is that rest gets compressed too: one more prompt before bed, a check-in at midnight, a weekend that blurs into the week. That's compression burnout.
+- **Who it's for.** It's for people who work with Claude Code every day. In particular, anyone who hands a long task to an agent and then feels they ought to watch it, or slips in one more prompt before bed.
+- **The problem: compression burnout.** Agents compress weeks of work into hours, and rest gets compressed along with it. It shows up as:
+  - a check-in at midnight;
+  - a weekend that blurs into the week;
+  - the feeling that because the machine is working, you should be too.
+- **How it gives time back.** The only thing that grows the garden is stepping away:
+  - a night off grows a flower;
+  - a weekend grows a tree;
+  - a real break grows a rare plant;
+  - handing off a long task before you go adds a golden flower.
 
-Most tools answer with more nudges: break reminders, streaks, badges for "productive days". Overnight Garden does the opposite. It never says anything. It notices when you've been away and leaves a plant for you to find when you come back:
+  Once it's installed there's nothing to do: nothing to check, tend or log.
+- **What it never does.**
+  - It sends no notifications, prompts or questions.
+  - It keeps no streaks, and doesn't track you.
+  - It never wilts, never resets, and never adds text to your conversations.
+
+  It keeps three times on your own computer: when you were last here, when you last sent a prompt, and when the agent last stopped. It never stores what you wrote, and it sends nothing anywhere.
+
+## Quick start
+
+```bash
+git clone https://github.com/har27il/overnight-garden.git
+cd overnight-garden
+node scripts/install.js
+```
+
+Restart Claude Code and you'll see `🌱 Overnight Garden · grows while you rest` at the bottom. Tonight, just stop working; tomorrow morning there's a flower.
+
+You need [Claude Code](https://claude.com/claude-code) and [Node.js](https://nodejs.org) 20 or newer. Nothing else gets installed, and nothing uses the network.
+
+To remove it, run `node scripts/uninstall.js`. Your settings come back exactly as they were.
+
+## What grows
 
 | Time away | What grows |
 |---|---|
@@ -27,28 +60,24 @@ Most tools answer with more nudges: break reminders, streaks, badges for "produc
 | Any 8+ hours, if the agent kept working on your last prompt after you left, for 10+ minutes in all | 🌻 a golden flower as a bonus: hand off the work, then rest |
 
 - **Only time away grows anything.** Working more never earns a plant, and short breaks grow nothing.
-- **It never wilts, never resets, and never counts streaks.** A month off is rewarded, never punished. Plants are only ever added.
-- **It gives time back.** It adds no notifications, prompts, questions or extra text to your conversations. It only lives in the status line, which you can glance at or ignore.
+- **Plants are only ever added.** A month off is rewarded, never punished.
 
-## What you need
+## Evidence that it works
 
-- [Claude Code](https://claude.com/claude-code)
-- [Node.js](https://nodejs.org) 20 or newer. Check with `node --version`.
-- Git
+- **CI.** On every push, [GitHub Actions](.github/workflows/ci.yml) runs the full test suite and `demo.sh` on Linux, macOS and Windows, with Node.js 20 and 24. It also checks the demo prints exactly what's in [`demo-output.txt`](demo-output.txt). The badge at the top shows the latest result.
+- **The demo's real output** is saved in [`demo-output.txt`](demo-output.txt) and shown below.
+- **The tests read like the rules they check.** For example: "never wilts: a garden left alone for a year keeps every plant", and "no alerts or prompts: every hook call prints nothing and exits 0, adding nothing to the conversation". Run `npm test` to see them all.
+- **The garden card** is pictured further down.
 
-It has no other dependencies and never uses the network. It works on macOS, Linux and Windows.
-
-## Try it in a minute, without installing anything
+### Run the demo yourself
 
 ```bash
-git clone https://github.com/har27il/overnight-garden.git
-cd overnight-garden
 ./demo.sh
 ```
 
-On Windows PowerShell, run `node scripts/demo.js` instead of `./demo.sh`.
+On Windows PowerShell, use `node scripts/demo.js` instead.
 
-The demo makes a throwaway home folder, installs Overnight Garden into it, and plays out a weekday night, a lunch break, a weekend, a long agent handoff and a year left alone. It uses the real hooks, engine and status line, run the same way Claude Code runs them. The only thing it fakes is the clock. Then it uninstalls, checks your settings came back exactly, and deletes the throwaway folder. Your real `~/.claude` is never touched. Every line it prints is a check:
+The demo installs Overnight Garden into a throwaway home folder. It plays out a weekday night, a lunch break, a weekend, a long agent handoff and a year left alone. Then it uninstalls and checks your settings came back byte for byte. Every line it prints is a check:
 
 ```
 PASS install: settings backed up first, then 3 hooks and the status line added; your own settings kept
@@ -65,17 +94,17 @@ PASS uninstall: settings are byte-for-byte what they were before install, and th
 PASS all 11 checks passed; throwaway home removed
 ```
 
-## Install
+### What's real vs simulated
 
-From the `overnight-garden` folder:
+**Real:**
+- `scripts/install.js` really edits a `settings.json`, backing it up first.
+- Each hook runs as the exact command the install wrote, in a shell, with the kind of JSON Claude Code sends.
+- The engine, garden file, status line, card and uninstall are the same code you install.
 
-```bash
-node scripts/install.js
-```
-
-This backs up `~/.claude/settings.json` to `~/.claude/overnight-garden/settings.backup.json`, then adds three hooks and the status line. Restart Claude Code, and you'll see `🌱 Overnight Garden · grows while you rest` at the bottom. Your first flower appears the first time you come back after 8 hours away.
-
-Keep the folder where it is, because the hooks run from it. Claude Code shows only one status line, so if you already have one, it's put aside while the garden is installed and comes back when you uninstall.
+**Simulated:**
+- **The clock.** Each hook call is told the time, in milliseconds, through `OVERNIGHT_GARDEN_NOW`, so a year passes in seconds. Nothing is told what to grow or print; the real rules decide.
+- **Claude Code itself.** The demo and tests send the events Claude Code would send. They don't start a live Claude Code session.
+- **Your home folder.** Everything happens in a throwaway folder, so your real `~/.claude` is never touched.
 
 ## See your garden card
 
@@ -96,7 +125,7 @@ The four plant paintings are original artwork, painted in code with [OpenCV](htt
 - **Highlights:** highlights are lifted back out, as a damp brush would.
 - **Softening:** OpenCV's watercolor filter (`stylization`) softens the result.
 
-Every random choice is seeded, so painting again gives exactly the same pictures. You don't need Python to use the garden: the paintings come ready in `assets/plants/`. To repaint them yourself:
+Every random choice is seeded, so painting again gives exactly the same pictures. You don't need Python to use the garden, because the paintings come ready in `assets/plants/`. To repaint them yourself:
 
 ```bash
 pip install opencv-python numpy
@@ -118,10 +147,10 @@ This puts your settings back exactly as they were before you installed. If you c
 - **The golden flower.** It counts only the agent's turn on your last prompt, in that same window, and only if the agent was still working after you were last here.
 - **Files.** Everything lives in `~/.claude/overnight-garden/`:
   - `garden.json`: your plants.
-  - `presence.json`: when you were last here.
+  - `presence.json`: the three times above.
   - `card.html`: your garden card.
   - The settings backup, while installed.
-- **Staying silent.** The hooks always print nothing and exit cleanly, even if something goes wrong. The status line only ever shows known plant types, never text from the garden file.
+- **Staying silent.** The hooks always print nothing and exit cleanly, even if something goes wrong. The status line and card only ever show known plant types, never text from the garden file.
 
 | File | What it does |
 |---|---|
@@ -131,10 +160,9 @@ This puts your settings back exactly as they were before you installed. If you c
 | `src/overnight-garden-hook.js` | The hook Claude Code runs. |
 | `src/overnight-garden-statusline.js` | The status line Claude Code runs. |
 | `src/render.js` | The status line text and the garden card. Shows only known plant types and the dates it formats itself. |
-| `scripts/card.js` | Saves the garden card. |
-| `tools/paint_plants.py`, `assets/plants/` | Paints the watercolor plants with OpenCV, and the paintings it made. |
 | `src/settings.js` | Install and uninstall, with the backup. |
-| `scripts/demo.js`, `scripts/demo-timeline.js` | The demo and its timeline. |
+| `scripts/` | The install, uninstall, card and demo commands. |
+| `tools/paint_plants.py`, `assets/plants/` | Paints the watercolor plants with OpenCV, and the paintings it made. |
 
 ## Run the tests
 
@@ -144,13 +172,15 @@ npm test
 
 The tests only ever use throwaway home folders, never your real `~/.claude`.
 
-## Good to know
+## Limitations
 
-- Time away is counted from your last prompt. If you read the agent's answer for an hour before leaving, that hour counts as away.
-- There's one garden per computer account, shared by every Claude Code window.
-- Automated `claude -p` runs, such as a nightly job, also trigger the hooks, so they count as you being here.
-- Two windows' hooks firing in the very same instant could, rarely, undo each other's last update.
-- Tested on Windows 11 with Node.js 24. The demo and tests run the installed commands exactly as they're written into `settings.json`, with the same kind of input Claude Code sends.
+- **Not yet run inside a live Claude Code session.** The automated runs send Claude Code's documented hook input (`session_id`, and `source` for SessionStart) instead. If a future version sends something different, the hook stays silent and that night simply doesn't grow.
+- **Time away is counted from your last prompt or session start.** Reading the agent's answer for an hour before leaving counts as away.
+- **Automated `claude -p` runs** fire the same hooks as you do, such as a nightly job, so they count as you being here.
+- **Claude Code shows one status line.** If you already have one, it's put aside while the garden is installed and comes back on uninstall.
+- **The hooks run from the folder you cloned**, so keep it where it is. A folder path containing `"`, `$` or a backtick would break the installed commands.
+- **There's one garden per computer account**, shared by every Claude Code window. Two windows' hooks firing in the very same instant could undo each other's last update.
+- **The paintings are made once and committed.** CI doesn't repaint them, because a different OpenCV version could shift pixels.
 
 ## License
 

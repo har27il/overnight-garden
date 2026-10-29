@@ -1,0 +1,34 @@
+# Runs the tests and demo.sh on every push, on Linux, macOS and Windows, with the
+# oldest and newest supported Node.js, and checks the demo still prints exactly
+# what demo-output.txt says it does.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }}, Node ${{ matrix.node }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 24]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Run the tests
+        run: npm test
+      - name: Run demo.sh
+        shell: bash
+        run: ./demo.sh | tee demo-run.txt
+      - name: Check demo-output.txt matches this run
+        shell: bash
+        run: diff demo-output.txt demo-run.txt
