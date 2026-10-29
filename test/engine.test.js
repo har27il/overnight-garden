@@ -74,6 +74,12 @@ test('no absence given at all: nothing grows, nothing breaks', () => {
   assert.equal(grow(garden), garden);
 });
 
+test('null instead of an absence: nothing grows, nothing breaks', () => {
+  assert.deepEqual(plantsFor(null), []);
+  const garden = emptyGarden();
+  assert.equal(grow(garden, null), garden);
+});
+
 test('growing adds the plants to the garden, stamped with when you left and came back', () => {
   const garden = grow(emptyGarden(), away(9 * HOUR, 12 * MINUTE));
   assert.deepEqual(garden.plants, [
@@ -106,6 +112,12 @@ test('on the same night, a golden flower earned only by the second window still 
     agentRunMs: 12 * MINUTE,
   });
   assert.deepEqual(secondWindow.plants.map((plant) => plant.kind), ['flower', 'golden-flower']);
+});
+
+test('one bad clock reading never stops later nights from growing', () => {
+  const glitch = grow(emptyGarden(), { leftAt: LEFT, returnedAt: Date.parse('2031-01-01T00:00:00Z') });
+  const nextNight = grow(glitch, { leftAt: LEFT + DAY, returnedAt: LEFT + DAY + 9 * HOUR });
+  assert.deepEqual(nextNight.plants.map((plant) => plant.kind), ['rare-plant', 'flower']);
 });
 
 test('a garden left alone for a year keeps every plant', () => {

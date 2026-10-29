@@ -23,11 +23,12 @@ export function emptyGarden() {
 /**
  * The plants one absence grows: the biggest plant its length reached, plus a
  * golden flower if the agent had been working 10+ minutes when the user left.
- * @param {{leftAt: number, returnedAt: number, agentRunMs?: number}} absence
+ * @param {{leftAt: number, returnedAt: number, agentRunMs?: number}} [absence]
  *   Times are milliseconds since the epoch, as from Date.now().
  * @returns {string[]} e.g. ['tree', 'golden-flower'], or [] if nothing grows.
  */
-export function plantsFor({ leftAt, returnedAt, agentRunMs = 0 } = {}) {
+export function plantsFor(absence) {
+  const { leftAt, returnedAt, agentRunMs = 0 } = absence ?? {};
   if (!isTime(leftAt) || !isTime(returnedAt)) return [];
   const away = returnedAt - leftAt;
   if (away < FLOWER_AFTER) return [];
@@ -41,7 +42,7 @@ export function plantsFor({ leftAt, returnedAt, agentRunMs = 0 } = {}) {
  * Returns a new garden with this absence's plants added. Plants are only ever
  * added: nothing wilts, resets or depends on a streak.
  */
-export function grow(garden, absence = {}) {
+export function grow(garden, absence) {
   const kinds = plantsFor(absence);
   if (kinds.length === 0) return garden;
 
@@ -51,8 +52,14 @@ export function grow(garden, absence = {}) {
 }
 
 const isGolden = (plant) => plant.kind === 'golden-flower';
-const overlap = (a, b) =>
-  Date.parse(a.leftAt) < Date.parse(b.returnedAt) && Date.parse(b.leftAt) < Date.parse(a.returnedAt);
+
+// A kept plant covers a new one when it ended during the new one's stretch.
+// Nights are recorded as the user comes back, so a plant ending after a newer
+// one can only come from a wrong clock, and it never blocks later nights.
+const covers = (kept, plant) => {
+  const keptEnd = Date.parse(kept.returnedAt);
+  return Date.parse(plant.leftAt) < keptEnd && keptEnd <= Date.parse(plant.returnedAt);
+};
 
 /**
  * Adds plants under the same-night rule: a stretch of time holds at most one
@@ -62,7 +69,7 @@ const overlap = (a, b) =>
 export function addPlants(garden, plants) {
   const kept = [...garden.plants];
   for (const plant of plants) {
-    const taken = kept.some((other) => isGolden(other) === isGolden(plant) && overlap(other, plant));
+    const taken = kept.some((other) => isGolden(other) === isGolden(plant) && covers(other, plant));
     if (!taken) kept.push(plant);
   }
   return kept.length === garden.plants.length ? garden : { ...garden, plants: kept };

@@ -1,9 +1,9 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import fs, { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import fs, { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { emptyGarden, grow } from '../src/engine.js';
 import { loadGarden, recordAbsence, saveGarden } from '../src/store.js';
@@ -56,7 +56,7 @@ test('recording a night away reads the file once and hands back exactly what it 
 
 test('a damaged garden file is never wiped or overwritten', () => {
   const file = join(folder('damaged'), 'garden.json');
-  saveGarden(file, emptyGarden());
+  mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, '{ this is not a garden');
   const before = readFileSync(file);
 
@@ -70,7 +70,7 @@ test('a garden file with a blank or broken entry counts as damaged and is left u
   const cases = { blank: '{"version":1,"plants":[null]}', broken: '{"version":1,"plants":[{"kind":"flower"}]}' };
   for (const [name, text] of Object.entries(cases)) {
     const file = join(folder(`entry-${name}`), 'garden.json');
-    saveGarden(file, emptyGarden());
+    mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, text);
 
     assert.throws(() => loadGarden(file), /damaged/);
@@ -88,7 +88,7 @@ test('a garden file with an unknown plant type or a made-up date counts as damag
   for (const [name, plant] of Object.entries(cases)) {
     const file = join(folder(name), 'garden.json');
     const text = JSON.stringify({ version: 1, plants: [plant] });
-    saveGarden(file, emptyGarden());
+    mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, text);
 
     assert.throws(() => loadGarden(file), /damaged/, name);
@@ -130,6 +130,33 @@ test('saving an empty garden over a full one keeps every plant, so it can never 
 
   saveGarden(file, emptyGarden());
   assert.deepEqual(readFileSync(file), before);
+});
+
+test('saving a garden with an invalid plant is refused, leaving the file untouched', () => {
+  const file = join(folder('bad-save'), 'garden.json');
+  recordAbsence(file, night);
+  const before = readFileSync(file);
+  const numericTimes = { kind: 'flower', leftAt: LEFT + 48 * HOUR, returnedAt: LEFT + 60 * HOUR };
+
+  assert.throws(() => saveGarden(file, { version: 1, plants: [numericTimes] }), /invalid/);
+  assert.deepEqual(readFileSync(file), before);
+});
+
+test('saving plants that are already in the garden leaves the file alone', (t) => {
+  const file = join(folder('no-op'), 'garden.json');
+  const garden = recordAbsence(file, night);
+
+  const renames = t.mock.method(fs, 'renameSync');
+  syncBuiltinESMExports(); // Points store.js's renameSync import at the spy.
+  try {
+    saveGarden(file, garden);
+    recordAbsence(file, night);
+  } finally {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  }
+
+  assert.equal(renames.mock.callCount(), 0);
 });
 
 test('two sessions saving from out-of-date copies keep both of their plants', () => {

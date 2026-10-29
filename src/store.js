@@ -41,18 +41,19 @@ export function loadGarden(file) {
 
 /** Adds a garden's plants to the file and returns the garden as saved. */
 export function saveGarden(file, garden) {
+  if (!garden.plants.every(isPlant)) {
+    throw new Error(`Refusing to save an invalid plant to ${file}; nothing was written.`);
+  }
+  const onDisk = loadGarden(file); // Throws, writing nothing, if the file is damaged.
   // Keep every plant already on disk, including ones another session just added.
-  const merged = addPlants(loadGarden(file), garden.plants); // Throws, writing nothing, if the file is damaged.
-  writeGarden(file, merged);
+  const merged = addPlants(onDisk, garden.plants);
+  if (merged !== onDisk) writeGarden(file, merged);
   return merged;
 }
 
 /** Adds one absence's plants to the garden file and returns the garden as saved. */
 export function recordAbsence(file, absence) {
-  const before = loadGarden(file);
-  const after = grow(before, absence);
-  if (after !== before) writeGarden(file, after);
-  return after;
+  return saveGarden(file, grow(emptyGarden(), absence));
 }
 
 // Writes a temporary file, then swaps it in, so a crash can't leave half a garden.
