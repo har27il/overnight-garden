@@ -34,7 +34,7 @@
   - It keeps no streaks, and doesn't track you.
   - It never wilts, never resets, and never adds text to your conversations.
 
-  It keeps three times on your own computer: when you were last here, when you last sent a prompt, and when the agent last stopped. It never stores what you wrote, and it sends nothing anywhere.
+  On your own computer it keeps three times: when you were last here, when you last sent a prompt, and when the agent last stopped. It also keeps the ID of the Claude Code window you last typed in. It never stores what you wrote, and it sends nothing anywhere.
 
 ## Quick start
 
@@ -64,7 +64,7 @@ To remove it, run `node scripts/uninstall.js`. Your settings come back exactly a
 
 ## Evidence that it works
 
-- **CI.** On every push, [GitHub Actions](.github/workflows/ci.yml) runs the full test suite and `demo.sh` on Linux, macOS and Windows, with Node.js 20 and 24. It also checks the demo prints exactly what's in [`demo-output.txt`](demo-output.txt). The badge at the top shows the latest result.
+- **CI.** On every push, [GitHub Actions](.github/workflows/ci.yml) runs the full test suite and `demo.sh` on Linux, macOS and Windows, with Node.js 20, 22 and 24. It also checks the demo prints exactly what's in [`demo-output.txt`](demo-output.txt). The badge at the top shows the latest result.
 - **The demo's real output** is saved in [`demo-output.txt`](demo-output.txt) and shown below.
 - **The tests read like the rules they check.** For example: "never wilts: a garden left alone for a year keeps every plant", and "no alerts or prompts: every hook call prints nothing and exits 0, adding nothing to the conversation". Run `npm test` to see them all.
 - **The garden card** is pictured further down.
@@ -125,7 +125,7 @@ The four plant paintings are original artwork, painted in code with [OpenCV](htt
 - **Highlights:** highlights are lifted back out, as a damp brush would.
 - **Softening:** OpenCV's watercolor filter (`stylization`) softens the result.
 
-Every random choice is seeded, so painting again gives exactly the same pictures. You don't need Python to use the garden, because the paintings come ready in `assets/plants/`. To repaint them yourself:
+Every random choice is seeded. Painting again with the same OpenCV and NumPy versions gives exactly the same pictures; these were made with OpenCV 5.0 and NumPy 2.4. You don't need Python to use the garden, because the paintings come ready in `assets/plants/`. To repaint them yourself:
 
 ```bash
 pip install opencv-python numpy
@@ -147,7 +147,7 @@ This puts your settings back exactly as they were before you installed. If you c
 - **The golden flower.** It counts only the agent's turn on your last prompt, in that same window, and only if the agent was still working after you were last here.
 - **Files.** Everything lives in `~/.claude/overnight-garden/`:
   - `garden.json`: your plants.
-  - `presence.json`: the three times above.
+  - `presence.json`: those three times and the window ID.
   - `card.html`: your garden card.
   - The settings backup, while installed.
 - **Staying silent.** The hooks always print nothing and exit cleanly, even if something goes wrong. The status line and card only ever show known plant types, never text from the garden file.

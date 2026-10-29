@@ -146,7 +146,9 @@ test('nothing hidden: the code contains no invisible characters, so what you rea
   const repo = fileURLToPath(new URL('..', import.meta.url));
   const invisible = [0x200b, 0x200c, 0x200d, 0x2060, 0xfeff];
   for (const dir of ['src', 'test', 'scripts', 'tools']) {
-    for (const name of readdirSync(join(repo, dir))) {
+    // Every source file, in subfolders too; folders and caches like __pycache__ are skipped.
+    for (const name of readdirSync(join(repo, dir), { recursive: true })) {
+      if (!/\.(js|py)$/.test(name)) continue;
       const text = readFileSync(join(repo, dir, name), 'utf8');
       const found = [...text].filter((char) => invisible.includes(char.codePointAt(0)));
       assert.equal(found.length, 0, `${dir}/${name} contains ${found.length} invisible character(s)`);

@@ -1,6 +1,6 @@
-# Runs the tests and demo.sh on every push, on Linux, macOS and Windows, with the
-# oldest and newest supported Node.js, and checks the demo still prints exactly
-# what demo-output.txt says it does.
+# Runs the tests and demo.sh on every push, on Linux, macOS and Windows, with
+# Node.js 20, 22 and 24, and checks the demo still prints exactly what
+# demo-output.txt says it does.
 name: CI
 
 on:
@@ -17,11 +17,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        node: [20, 24]
+        node: [20, 22, 24]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
       - name: Run the tests

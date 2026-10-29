@@ -85,7 +85,7 @@ export function cardHtml(garden, paintings = {}) {
   .bed { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-end; min-height: 56px; padding: 14px 12px 10px;
     border-bottom: 10px solid var(--soil); border-radius: 12px 12px 4px 4px; }
   .plant { font-size: 40px; line-height: 1; }
-  [data-plant] { display: inline-block; background: center / contain no-repeat; }
+  [data-plant] { display: inline-block; background-position: center; background-size: contain; background-repeat: no-repeat; }
   .plant[data-plant] { width: 76px; height: 76px; margin: 0 -6px -10px; }
   .icon[data-plant] { width: 24px; height: 24px; vertical-align: -6px; }
   ${paintingStyles.join('\n  ')}
