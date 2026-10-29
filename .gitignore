@@ -1,0 +1,20 @@
+# Dependencies and build output (Node or Python, chosen in build step 1)
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+dist/
+coverage/
+
+# Local secrets and logs
+.env
+*.log
+
+# Personal Claude Code settings
+.claude/settings.local.json
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
