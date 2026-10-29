@@ -31,3 +31,7 @@ What this means while building:
 - One task per branch, with a PR per task. Never push to main, merge, or force-push. The user merges.
 - The user is non-technical and doesn't read code. Explain every change in plain English, and prove it works with real test or demo output.
 - Stop and ask whenever something needs the user's login or approval. This includes pushing a branch and opening its PR: say what's about to go up, then wait for an OK.
+- After opening a PR, end your message with: "PR ready — run /code-review and /security-review before merging." Don't run them yourself.
+- The garden file lives under ~/.claude/, never in a shared temp folder like /tmp.
+- The status line and the card show only known plant types, never raw text from the garden file.
+- All times passed to the engine are in milliseconds. Hooks and the demo must have a test proving that.
