@@ -53,8 +53,9 @@ PASS a year left alone: away 365 days (10 Nov 2026 → 11 Nov 2027) → grew �
 PASS never wilts or resets: after a year away, all 5 plants are still there, in the order they grew
 PASS no alerts: all 19 hook calls printed nothing and exited 0, so nothing was added to the conversation
 PASS status line shows: 🌱 Overnight Garden · 🌷 2  🌳 1  🍀 1  🌻 1
+PASS garden card: saved with all 5 plants and when each one grew
 PASS uninstall: settings are byte-for-byte what they were before install, and the garden is kept
-PASS all 10 checks passed; throwaway home removed
+PASS all 11 checks passed; throwaway home removed
 ```
 
 ## Install
@@ -68,6 +69,16 @@ node scripts/install.js
 This backs up `~/.claude/settings.json` to `~/.claude/overnight-garden/settings.backup.json`, then adds three hooks and the status line. Restart Claude Code, and you'll see `🌱 Overnight Garden · grows while you rest` at the bottom. Your first flower appears the first time you come back after 8 hours away.
 
 Keep the folder where it is, because the hooks run from it. Claude Code shows only one status line, so if you already have one, it's put aside while the garden is installed and comes back when you uninstall.
+
+## See your garden card
+
+```bash
+node scripts/card.js
+```
+
+This saves a small web page of your garden and prints its address. Open it in your browser to see every plant and when it grew:
+
+![The garden card: two flowers, a tree, a golden flower and a rare plant above a strip of soil, with a key explaining each plant](docs/card.png)
 
 ## Uninstall
 
@@ -84,6 +95,7 @@ This puts your settings back exactly as they were before you installed. If you c
 - **Files.** Everything lives in `~/.claude/overnight-garden/`:
   - `garden.json`: your plants.
   - `presence.json`: when you were last here.
+  - `card.html`: your garden card.
   - The settings backup, while installed.
 - **Staying silent.** The hooks always print nothing and exit cleanly, even if something goes wrong. The status line only ever shows known plant types, never text from the garden file.
 
@@ -94,6 +106,8 @@ This puts your settings back exactly as they were before you installed. If you c
 | `src/presence.js` | Tracks when you were last here and turns a return into an absence. |
 | `src/overnight-garden-hook.js` | The hook Claude Code runs. |
 | `src/overnight-garden-statusline.js` | The status line Claude Code runs. |
+| `src/render.js` | The status line text and the garden card. Shows only known plant types and the dates it formats itself. |
+| `scripts/card.js` | Saves the garden card. |
 | `src/settings.js` | Install and uninstall, with the backup. |
 | `scripts/demo.js`, `scripts/demo-timeline.js` | The demo and its timeline. |
 

@@ -1,0 +1,91 @@
+import { after, test } from 'node:test';
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { emptyGarden, grow } from '../src/engine.js';
+import { cardFile, gardenDir, gardenFile } from '../src/paths.js';
+import { cardHtml } from '../src/render.js';
+import { saveGarden } from '../src/store.js';
+
+const SCRIPT = fileURLToPath(new URL('../scripts/card.js', import.meta.url));
+const MINUTE = 60 * 1000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+const FRI_7H = Date.parse('2026-11-06T07:00:00Z');
+
+const root = mkdtempSync(join(tmpdir(), 'overnight-garden-card-'));
+after(() => rmSync(root, { recursive: true, force: true }));
+
+let homes = 0;
+const newHome = () => {
+  const home = join(root, `home-${++homes}`);
+  mkdirSync(home);
+  return home;
+};
+
+const garden = () =>
+  [
+    { leftAt: FRI_7H - 9 * HOUR, returnedAt: FRI_7H },
+    { leftAt: FRI_7H + 11 * HOUR, returnedAt: FRI_7H + 3 * DAY + 2 * HOUR },
+    { leftAt: FRI_7H + 4 * DAY, returnedAt: FRI_7H + 4 * DAY + 9 * HOUR, agentRunMs: 45 * MINUTE },
+  ].reduce(grow, emptyGarden());
+
+const plantCount = (html) => (html.match(/class="plant"/g) ?? []).length;
+
+test('the card shows one plant for each plant grown, and when each one grew', () => {
+  const html = cardHtml(garden());
+  assert.equal(plantCount(html), 4);
+  assert.match(html, /<span class="plant" title="flower, grew \d{1,2} Nov 2026">🌷<\/span>/);
+  assert.match(html, /<span class="plant" title="golden flower, grew \d{1,2} Nov 2026">🌻<\/span>/);
+  assert.match(html, /2 flowers · 1 tree · 1 golden flower/);
+  assert.match(html, /Growing since \d{1,2} Nov 2026 · latest \d{1,2} Nov 2026/);
+});
+
+test('an empty garden gets a gentle card, not a nudge', () => {
+  const html = cardHtml(emptyGarden());
+  assert.equal(plantCount(html), 0);
+  assert.match(html, /Nothing yet\./);
+  assert.match(html, /Your first flower grows after a night away\./);
+});
+
+test('the card never shows raw text from the garden file', () => {
+  const tampered = garden();
+  tampered.title = '<script>alert("title")</script>';
+  tampered.plants[0].label = '<img src=x onerror=alert(1)>';
+  tampered.plants.push({ kind: '<b>weed</b>', leftAt: tampered.plants[0].leftAt, returnedAt: tampered.plants[0].returnedAt });
+
+  const html = cardHtml(tampered);
+  assert.equal(plantCount(html), 4);
+  for (const stray of ['<script>', 'alert', 'onerror', 'weed']) assert.ok(!html.includes(stray), stray);
+});
+
+test('the card script saves the card in ~/.claude/overnight-garden and prints where it is', () => {
+  const home = newHome();
+  saveGarden(gardenFile(home), garden());
+  const result = spawnSync(process.execPath, [SCRIPT], {
+    env: { ...process.env, HOME: home, USERPROFILE: home },
+    encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, `Your garden card: ${pathToFileURL(cardFile(home)).href}\n`);
+  assert.equal(plantCount(readFileSync(cardFile(home), 'utf8')), 4);
+});
+
+test('with a damaged garden file, the card script says why and saves an empty card', () => {
+  const home = newHome();
+  mkdirSync(gardenDir(home), { recursive: true });
+  writeFileSync(gardenFile(home), '{ damaged');
+  const result = spawnSync(process.execPath, [SCRIPT], {
+    env: { ...process.env, HOME: home, USERPROFILE: home },
+    encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 0);
+  assert.match(result.stderr, /couldn't be read/);
+  assert.equal(plantCount(readFileSync(cardFile(home), 'utf8')), 0);
+  assert.equal(readFileSync(gardenFile(home), 'utf8'), '{ damaged');
+});

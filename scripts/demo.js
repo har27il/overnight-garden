@@ -13,7 +13,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
-import { backupFile, gardenFile, settingsFile } from '../src/paths.js';
+import { backupFile, cardFile, gardenFile, settingsFile } from '../src/paths.js';
 import { PLANT_LOOKS } from '../src/render.js';
 import { loadGarden } from '../src/store.js';
 import { chapters, describeAbsence } from './demo-timeline.js';
@@ -97,6 +97,13 @@ try {
 
   const line = run(settings.statusLine.command, { session_id: 'demo' }).stdout.trimEnd();
   check(line === '🌱 Overnight Garden · 🌷 2  🌳 1  🍀 1  🌻 1', `status line shows: ${line}`);
+
+  run(`node "${join(repoDir, 'scripts', 'card.js')}"`);
+  const card = readFileSync(cardFile(home), 'utf8');
+  check(
+    (card.match(/class="plant"/g) ?? []).length === 5 && card.includes('2 flowers · 1 tree · 1 rare plant · 1 golden flower'),
+    'garden card: saved with all 5 plants and when each one grew',
+  );
 
   run(`node "${join(repoDir, 'scripts', 'uninstall.js')}"`);
   check(
