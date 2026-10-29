@@ -1,8 +1,10 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import fs, { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { emptyGarden, grow } from '../src/engine.js';
 import { loadGarden, recordAbsence, saveGarden } from '../src/store.js';
 
@@ -34,6 +36,24 @@ test('recording a night away saves its plants to the file, creating the folder i
   assert.deepEqual(kinds, ['flower', 'golden-flower']);
 });
 
+test('recording a night away reads the file once and hands back exactly what it saved', (t) => {
+  const file = join(folder('one-read'), 'garden.json');
+  recordAbsence(file, { leftAt: LEFT + 100 * HOUR, returnedAt: LEFT + 150 * HOUR });
+
+  const reads = t.mock.method(fs, 'readFileSync');
+  syncBuiltinESMExports(); // Points store.js's readFileSync import at the spy.
+  let returned;
+  try {
+    returned = recordAbsence(file, night);
+  } finally {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  }
+
+  assert.equal(reads.mock.calls.filter((call) => call.arguments[0] === file).length, 1);
+  assert.deepEqual(returned, loadGarden(file));
+});
+
 test('a damaged garden file is never wiped or overwritten', () => {
   const file = join(folder('damaged'), 'garden.json');
   saveGarden(file, emptyGarden());
@@ -59,11 +79,48 @@ test('a garden file with a blank or broken entry counts as damaged and is left u
   }
 });
 
+test('a garden file with an unknown plant type or a made-up date counts as damaged', () => {
+  const time = '2026-10-29T22:00:00.000Z';
+  const cases = {
+    'unknown-kind': { kind: 'flowr', leftAt: time, returnedAt: time },
+    'made-up-date': { kind: 'flower', leftAt: '1', returnedAt: time },
+  };
+  for (const [name, plant] of Object.entries(cases)) {
+    const file = join(folder(name), 'garden.json');
+    const text = JSON.stringify({ version: 1, plants: [plant] });
+    saveGarden(file, emptyGarden());
+    writeFileSync(file, text);
+
+    assert.throws(() => loadGarden(file), /damaged/, name);
+    assert.equal(readFileSync(file, 'utf8'), text);
+  }
+});
+
 test('a garden file saved by Notepad or PowerShell (with an invisible BOM marker) loads normally', () => {
   const file = join(folder('bom'), 'garden.json');
   recordAbsence(file, night);
-  writeFileSync(file, '﻿' + readFileSync(file, 'utf8'));
+  writeFileSync(file, String.fromCharCode(0xfeff) + readFileSync(file, 'utf8'));
   assert.deepEqual(loadGarden(file).plants.map((plant) => plant.kind), ['flower', 'golden-flower']);
+});
+
+test('a garden file saved by PowerShell 5.1 (UTF-16 format) loads normally', () => {
+  const file = join(folder('utf16'), 'garden.json');
+  recordAbsence(file, night);
+  const text = readFileSync(file, 'utf8');
+  writeFileSync(file, Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, 'utf16le')]));
+  assert.deepEqual(loadGarden(file).plants.map((plant) => plant.kind), ['flower', 'golden-flower']);
+});
+
+test('the code contains no invisible characters an editor could silently strip', () => {
+  const repo = fileURLToPath(new URL('..', import.meta.url));
+  const invisible = [0x200b, 0x200c, 0x200d, 0x2060, 0xfeff];
+  for (const dir of ['src', 'test']) {
+    for (const name of readdirSync(join(repo, dir))) {
+      const text = readFileSync(join(repo, dir, name), 'utf8');
+      const found = [...text].filter((char) => invisible.includes(char.codePointAt(0)));
+      assert.equal(found.length, 0, `${dir}/${name} contains ${found.length} invisible character(s)`);
+    }
+  }
 });
 
 test('saving an empty garden over a full one keeps every plant, so it can never reset', () => {
@@ -83,6 +140,16 @@ test('two sessions saving from out-of-date copies keep both of their plants', ()
   saveGarden(file, grow(sessionA, night));
   saveGarden(file, grow(sessionB, { leftAt: LEFT + 100 * HOUR, returnedAt: LEFT + 150 * HOUR }));
   assert.deepEqual(loadGarden(file).plants.map((plant) => plant.kind), ['flower', 'golden-flower', 'tree']);
+});
+
+test('two windows saving the same night at the same moment count it once', () => {
+  const file = join(folder('same-night'), 'garden.json');
+  const windowA = loadGarden(file);
+  const windowB = loadGarden(file);
+
+  saveGarden(file, grow(windowA, night));
+  saveGarden(file, grow(windowB, { ...night, leftAt: LEFT + 5 * 60 * 1000 }));
+  assert.deepEqual(loadGarden(file).plants.map((plant) => plant.kind), ['flower', 'golden-flower']);
 });
 
 test('saving leaves no temporary files behind', () => {

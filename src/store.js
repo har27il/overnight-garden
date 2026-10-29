@@ -3,16 +3,25 @@
 
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { emptyGarden, grow } from './engine.js';
+import { PLANT_KINDS, addPlants, emptyGarden, grow } from './engine.js';
 
-const isDateString = (value) => typeof value === 'string' && !Number.isNaN(Date.parse(value));
+// A time exactly as the garden writes it, e.g. 2026-10-29T22:00:00.000Z.
+const isGardenTime = (value) =>
+  typeof value === 'string' && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString() === value;
 const isPlant = (plant) =>
-  typeof plant?.kind === 'string' && isDateString(plant.leftAt) && isDateString(plant.returnedAt);
+  PLANT_KINDS.includes(plant?.kind) && isGardenTime(plant.leftAt) && isGardenTime(plant.returnedAt);
+
+// Notepad and PowerShell can start a file with an invisible byte-order mark
+// (U+FEFF), and PowerShell 5.1 saves as UTF-16 by default.
+function decode(bytes) {
+  const text = bytes[0] === 0xff && bytes[1] === 0xfe ? bytes.toString('utf16le', 2) : bytes.toString('utf8');
+  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+}
 
 export function loadGarden(file) {
-  let text;
+  let bytes;
   try {
-    text = readFileSync(file, 'utf8');
+    bytes = readFileSync(file);
   } catch (err) {
     if (err.code === 'ENOENT') return emptyGarden();
     throw err;
@@ -20,7 +29,7 @@ export function loadGarden(file) {
 
   let garden = null;
   try {
-    garden = JSON.parse(text.replace(/^﻿/, '')); // Notepad and PowerShell can add a BOM.
+    garden = JSON.parse(decode(bytes));
   } catch {
     // Falls through to the damaged-file error below.
   }
@@ -30,27 +39,30 @@ export function loadGarden(file) {
   return garden;
 }
 
+/** Adds a garden's plants to the file and returns the garden as saved. */
 export function saveGarden(file, garden) {
-  const onDisk = loadGarden(file); // Throws, writing nothing, if the file is damaged.
   // Keep every plant already on disk, including ones another session just added.
-  const isNew = (plant) => !onDisk.plants.some((kept) => kept.kind === plant.kind && kept.leftAt === plant.leftAt);
-  const merged = { ...garden, plants: [...onDisk.plants, ...garden.plants.filter(isNew)] };
+  const merged = addPlants(loadGarden(file), garden.plants); // Throws, writing nothing, if the file is damaged.
+  writeGarden(file, merged);
+  return merged;
+}
 
-  // Write a temporary file, then swap it in, so a crash can't leave half a garden.
+/** Adds one absence's plants to the garden file and returns the garden as saved. */
+export function recordAbsence(file, absence) {
+  const before = loadGarden(file);
+  const after = grow(before, absence);
+  if (after !== before) writeGarden(file, after);
+  return after;
+}
+
+// Writes a temporary file, then swaps it in, so a crash can't leave half a garden.
+function writeGarden(file, garden) {
   mkdirSync(dirname(file), { recursive: true });
   const temp = `${file}.${process.pid}.tmp`;
   try {
-    writeFileSync(temp, JSON.stringify(merged, null, 2) + '\n');
+    writeFileSync(temp, JSON.stringify(garden, null, 2) + '\n');
     renameSync(temp, file);
   } finally {
     rmSync(temp, { force: true });
   }
-}
-
-/** Adds one absence's plants to the garden file and returns the garden. */
-export function recordAbsence(file, absence) {
-  const before = loadGarden(file);
-  const after = grow(before, absence);
-  if (after !== before) saveGarden(file, after);
-  return after;
 }
