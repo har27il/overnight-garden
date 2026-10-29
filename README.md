@@ -6,6 +6,13 @@ A small garden in your Claude Code status line that grows only while you're away
 🌱 Overnight Garden · 🌷 2  🌳 1  🍀 1  🌻 1
 ```
 
+<p align="center">
+  <img src="assets/plants/flower.png" width="110" alt="Watercolor tulip: a flower">
+  <img src="assets/plants/tree.png" width="110" alt="Watercolor tree">
+  <img src="assets/plants/rare-plant.png" width="110" alt="Watercolor four-leaf clover: the rare plant">
+  <img src="assets/plants/golden-flower.png" width="110" alt="Watercolor sunflower: the golden flower">
+</p>
+
 ## Why it exists
 
 AI agents compress weeks of work into hours. The danger is that rest gets compressed too: one more prompt before bed, a check-in at midnight, a weekend that blurs into the week. That's compression burnout.
@@ -53,7 +60,7 @@ PASS a year left alone: away 365 days (10 Nov 2026 → 11 Nov 2027) → grew �
 PASS never wilts or resets: after a year away, all 5 plants are still there, in the order they grew
 PASS no alerts: all 19 hook calls printed nothing and exited 0, so nothing was added to the conversation
 PASS status line shows: 🌱 Overnight Garden · 🌷 2  🌳 1  🍀 1  🌻 1
-PASS garden card: saved with all 5 plants and when each one grew
+PASS garden card: saved with all 5 plants as watercolor paintings, and when each one grew
 PASS uninstall: settings are byte-for-byte what they were before install, and the garden is kept
 PASS all 11 checks passed; throwaway home removed
 ```
@@ -76,9 +83,25 @@ Keep the folder where it is, because the hooks run from it. Claude Code shows on
 node scripts/card.js
 ```
 
-This saves a small web page of your garden and prints its address. Open it in your browser to see every plant and when it grew:
+This saves a small web page of your garden and prints its address. Open it in your browser to see every plant, painted in watercolor, and when each one grew:
 
-![The garden card: two flowers, a tree, a golden flower and a rare plant above a strip of soil, with a key explaining each plant](docs/card.png)
+![The garden card: watercolor tulips, a tree, a sunflower and a four-leaf clover above a strip of soil, with a key explaining each plant](docs/card.png)
+
+## The paintings
+
+The four plant paintings are original artwork, painted in code with [OpenCV](https://opencv.org) by `tools/paint_plants.py`:
+- **Drawing:** each plant is built from simple shapes.
+- **Washes:** each shape is laid down like a watercolor wash, with wobbly edges, uneven pigment that dries darker at the rim, and paper grain.
+- **Glazing:** the washes layer like tinted glass.
+- **Highlights:** highlights are lifted back out, as a damp brush would.
+- **Softening:** OpenCV's watercolor filter (`stylization`) softens the result.
+
+Every random choice is seeded, so painting again gives exactly the same pictures. You don't need Python to use the garden: the paintings come ready in `assets/plants/`. To repaint them yourself:
+
+```bash
+pip install opencv-python numpy
+python tools/paint_plants.py
+```
 
 ## Uninstall
 
@@ -109,6 +132,7 @@ This puts your settings back exactly as they were before you installed. If you c
 | `src/overnight-garden-statusline.js` | The status line Claude Code runs. |
 | `src/render.js` | The status line text and the garden card. Shows only known plant types and the dates it formats itself. |
 | `scripts/card.js` | Saves the garden card. |
+| `tools/paint_plants.py`, `assets/plants/` | Paints the watercolor plants with OpenCV, and the paintings it made. |
 | `src/settings.js` | Install and uninstall, with the backup. |
 | `scripts/demo.js`, `scripts/demo-timeline.js` | The demo and its timeline. |
 

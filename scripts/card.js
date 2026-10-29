@@ -1,7 +1,9 @@
 // Saves your garden card, a small web page of everything that has grown, and
 // prints where it is: node scripts/card.js
 
+import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { PLANT_KINDS } from '../src/engine.js';
 import { cardFile, gardenFile } from '../src/paths.js';
 import { cardHtml } from '../src/render.js';
 import { loadGarden, writeFileAtomic } from '../src/store.js';
@@ -15,6 +17,17 @@ try {
   process.exit(1);
 }
 
+// The watercolor paintings that come with the garden, made by tools/paint_plants.py.
+const paintings = {};
+for (const kind of PLANT_KINDS) {
+  try {
+    const png = readFileSync(new URL(`../assets/plants/${kind}.png`, import.meta.url));
+    paintings[kind] = `data:image/png;base64,${png.toString('base64')}`;
+  } catch {
+    // No painting for this plant: the card shows its emoji instead.
+  }
+}
+
 const file = cardFile();
-writeFileAtomic(file, cardHtml(garden));
+writeFileAtomic(file, cardHtml(garden, paintings));
 console.log(`Your garden card: ${pathToFileURL(file).href}`);

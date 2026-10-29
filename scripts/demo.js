@@ -101,8 +101,9 @@ try {
   run(`node "${join(repoDir, 'scripts', 'card.js')}"`);
   const card = readFileSync(cardFile(home), 'utf8');
   check(
-    (card.match(/class="plant"/g) ?? []).length === 5 && card.includes('2 flowers · 1 tree · 1 rare plant · 1 golden flower'),
-    'garden card: saved with all 5 plants and when each one grew',
+    (card.match(/<span class="plant" data-plant=/g) ?? []).length === 5 &&
+      card.includes('2 flowers · 1 tree · 1 rare plant · 1 golden flower'),
+    'garden card: saved with all 5 plants as watercolor paintings, and when each one grew',
   );
 
   run(`node "${join(repoDir, 'scripts', 'uninstall.js')}"`);

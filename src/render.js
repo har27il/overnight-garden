@@ -33,14 +33,24 @@ export function statusLine(garden) {
 const cardDate = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 const formatDate = (iso) => cardDate.format(new Date(iso));
 
-/** The garden card: a small web page of every plant and when it grew. */
-export function cardHtml(garden) {
+// Only PNG data URIs are used as paintings, so nothing else can reach the page's CSS.
+const PNG_DATA_URI = /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/;
+
+/**
+ * The garden card: a small web page of every plant and when it grew. `paintings`
+ * maps plant types to watercolor images (PNG data URIs); emoji stand in for any missing.
+ */
+export function cardHtml(garden, paintings = {}) {
+  const painted = PLANT_KINDS.filter((kind) => PNG_DATA_URI.test(paintings[kind] ?? ''));
+  const show = (kind, className, label) =>
+    painted.includes(kind)
+      ? `<span class="${className}" data-plant="${kind}" role="img" aria-label="${label}" title="${label}"></span>`
+      : `<span class="${className}" title="${label}">${PLANT_LOOKS[kind].emoji}</span>`;
+  const paintingStyles = painted.map((kind) => `[data-plant="${kind}"] { background-image: url("${paintings[kind]}"); }`);
+
   const plants = garden.plants.filter((plant) => Object.hasOwn(PLANT_LOOKS, plant.kind));
   const bed = plants
-    .map((plant) => {
-      const look = PLANT_LOOKS[plant.kind];
-      return `<span class="plant" title="${look.one}, grew ${formatDate(plant.returnedAt)}">${look.emoji}</span>`;
-    })
+    .map((plant) => show(plant.kind, 'plant', `${PLANT_LOOKS[plant.kind].one}, grew ${formatDate(plant.returnedAt)}`))
     .join('');
   const counts = tally({ plants }).map(([kind, count]) => {
     const look = PLANT_LOOKS[kind];
@@ -50,7 +60,10 @@ export function cardHtml(garden) {
     plants.length > 0
       ? `Growing since ${formatDate(plants[0].returnedAt)} · latest ${formatDate(plants.at(-1).returnedAt)}`
       : 'Your first flower grows after a night away.';
-  const legend = PLANT_KINDS.map((kind) => `<li>${PLANT_LOOKS[kind].emoji} ${PLANT_LOOKS[kind].one}: ${PLANT_LOOKS[kind].rule}</li>`);
+  const legend = PLANT_KINDS.map((kind) => {
+    const icon = painted.includes(kind) ? show(kind, 'icon', PLANT_LOOKS[kind].one) : PLANT_LOOKS[kind].emoji;
+    return `<li>${icon} ${PLANT_LOOKS[kind].one}: ${PLANT_LOOKS[kind].rule}</li>`;
+  });
 
   return `<!doctype html>
 <html lang="en">
@@ -72,6 +85,10 @@ export function cardHtml(garden) {
   .bed { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-end; min-height: 56px; padding: 14px 12px 10px;
     border-bottom: 10px solid var(--soil); border-radius: 12px 12px 4px 4px; }
   .plant { font-size: 40px; line-height: 1; }
+  [data-plant] { display: inline-block; background: center / contain no-repeat; }
+  .plant[data-plant] { width: 76px; height: 76px; margin: 0 -6px -10px; }
+  .icon[data-plant] { width: 24px; height: 24px; vertical-align: -6px; }
+  ${paintingStyles.join('\n  ')}
   .empty { color: var(--muted); }
   .tally { margin: 16px 0 2px; font-weight: 600; }
   .since { margin: 0; color: var(--muted); font-size: 0.92rem; }
