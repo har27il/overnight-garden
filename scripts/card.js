@@ -23,8 +23,9 @@ for (const kind of PLANT_KINDS) {
   try {
     const png = readFileSync(new URL(`../assets/plants/${kind}.png`, import.meta.url));
     paintings[kind] = `data:image/png;base64,${png.toString('base64')}`;
-  } catch {
-    // No painting for this plant: the card shows its emoji instead.
+  } catch (err) {
+    // A missing painting just means the card shows the plant's emoji; say why for anything else.
+    if (err.code !== 'ENOENT') console.error(`The ${kind} painting couldn't be read, so the card shows its emoji. ${err.message}`);
   }
 }
 

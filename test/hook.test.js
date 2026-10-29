@@ -38,7 +38,7 @@ function fire(home, event, at, input = {}) {
 
 const kinds = (home) => loadGarden(gardenFile(home)).plants.map((plant) => plant.kind);
 
-test('every hook call prints nothing and exits 0, so it adds no prompt, alert or context', () => {
+test('no alerts or prompts: every hook call prints nothing and exits 0, adding nothing to the conversation', () => {
   const home = newHome();
   fire(home, 'session', MON_22H - HOUR, { source: 'startup' });
   fire(home, 'prompt', MON_22H, { prompt: 'hello' });
@@ -46,7 +46,7 @@ test('every hook call prints nothing and exits 0, so it adds no prompt, alert or
   fire(home, 'session', MON_22H + 2 * MINUTE, { source: 'compact' });
 });
 
-test('coming back after 9 hours grows a flower, stamped with the exact milliseconds given', () => {
+test('times are in milliseconds: coming back after 9 hours grows a flower stamped with the exact times given', () => {
   const home = newHome();
   fire(home, 'prompt', MON_22H);
   fire(home, 'prompt', MON_22H + 9 * HOUR);
@@ -55,7 +55,7 @@ test('coming back after 9 hours grows a flower, stamped with the exact milliseco
   ]);
 });
 
-test('a clock given in seconds instead of milliseconds grows nothing', () => {
+test('times are in milliseconds: a hook clock given in seconds grows nothing', () => {
   const home = newHome();
   const inSeconds = Math.floor(MON_22H / 1000);
   fire(home, 'prompt', inSeconds);
@@ -122,7 +122,7 @@ test('with a damaged garden file, the hook stays silent and leaves the file unto
   assert.equal(readFileSync(gardenFile(home), 'utf8'), '{ damaged');
 });
 
-test('with no input at all, the hook stays silent', () => {
+test('no alerts: with no input at all, the hook stays silent', () => {
   const home = newHome();
   const result = spawnSync(process.execPath, [HOOK, 'prompt'], {
     input: '',

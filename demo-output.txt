@@ -1,0 +1,12 @@
+PASS install: settings backed up first, then 3 hooks and the status line added; your own settings kept
+PASS weekday night: away 9 hours (Thu 22:00 → Fri 07:00) → grew 🌷 flower
+PASS lunch break: away 1 hour (Fri 12:00 → Fri 13:00) → nothing grew, and nothing was lost
+PASS weekend: away 63 hours (Fri 18:00 → Mon 09:00) → grew 🌳 tree
+PASS long agent handoff: away 9 hours (Mon 23:00 → Tue 08:00), the agent worked 45 minutes first → grew 🌷 flower + 🌻 golden flower
+PASS a year left alone: away 365 days (10 Nov 2026 → 11 Nov 2027) → grew 🍀 rare plant
+PASS never wilts or resets: after a year away, all 5 plants are still there, in the order they grew
+PASS no alerts: all 19 hook calls printed nothing and exited 0, so nothing was added to the conversation
+PASS status line shows: 🌱 Overnight Garden · 🌷 2  🌳 1  🍀 1  🌻 1
+PASS garden card: saved with all 5 plants as watercolor paintings, and when each one grew
+PASS uninstall: settings are byte-for-byte what they were before install, and the garden is kept
+PASS all 11 checks passed; throwaway home removed

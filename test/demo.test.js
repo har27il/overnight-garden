@@ -13,7 +13,7 @@ const DAY = 24 * HOUR;
 const events = chapters.flatMap((chapter) => chapter.events);
 const byName = Object.fromEntries(chapters.map((chapter) => [chapter.name, chapter]));
 
-test('every time in the demo is whole milliseconds since 1970, not seconds', () => {
+test('times are in milliseconds: every time in the demo is whole milliseconds since 1970', () => {
   for (const event of events) {
     assert.ok(Number.isInteger(event.at), `${event.hook} at ${event.at}`);
     assert.ok(event.at > 1e12 && event.at < 1e13, `${event.at} doesn't look like milliseconds`);
@@ -21,7 +21,7 @@ test('every time in the demo is whole milliseconds since 1970, not seconds', () 
   }
 });
 
-test("each chapter's time away, in milliseconds, matches its story", () => {
+test("nothing faked: each demo story's time away, in milliseconds, is exactly what it claims", () => {
   const away = (name) => {
     const { leftAt, returnedAt } = awayOf(byName[name]);
     return returnedAt - leftAt;
@@ -45,7 +45,7 @@ test('the demo describes each absence in plain words', () => {
   assert.equal(describeAbsence(byName['a year left alone']), 'away 365 days (10 Nov 2026 → 11 Nov 2027)');
 });
 
-test('replayed through the real presence code, only the absences the demo is about last 8+ hours', () => {
+test('nothing faked: replayed through the real code, the demo has no absences besides the ones it describes', () => {
   const returns = new Set(chapters.map((chapter) => chapter.events.at(-1)));
   let presence = emptyPresence();
   for (const [i, event] of events.entries()) {
