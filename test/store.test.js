@@ -145,7 +145,7 @@ test('a garden file saved by PowerShell 5.1 (UTF-16 format) loads normally', () 
 test('the code contains no invisible characters an editor could silently strip', () => {
   const repo = fileURLToPath(new URL('..', import.meta.url));
   const invisible = [0x200b, 0x200c, 0x200d, 0x2060, 0xfeff];
-  for (const dir of ['src', 'test', 'scripts']) {
+  for (const dir of ['src', 'test', 'scripts', 'tools']) {
     for (const name of readdirSync(join(repo, dir))) {
       const text = readFileSync(join(repo, dir, name), 'utf8');
       const found = [...text].filter((char) => invisible.includes(char.codePointAt(0)));
