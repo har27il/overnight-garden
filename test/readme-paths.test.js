@@ -10,14 +10,22 @@ import { fileURLToPath } from 'node:url';
 
 const HOME_ONLY_NAMES = new Set(['garden.json', 'presence.json', 'settings.json', 'card.html']);
 
-test('a stranger can start from the README: every file it names is really in the repo', () => {
+test('a stranger can start from the README: every file it names is really in the repo', (t) => {
   const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const readme = readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
-  const tracked = new Set(
-    execFileSync('git', ['ls-files', '-z'], { cwd: repoRoot, encoding: 'utf8' })
-      .split('\0')
-      .filter((name) => name !== ''),
-  );
+  let listing;
+  try {
+    listing = execFileSync('git', ['ls-files', '-z'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+  } catch {
+    // A ZIP download or a machine without git has no list of tracked files to check against.
+    t.skip('not a git checkout, so there is no list of tracked files to compare with');
+    return;
+  }
+  const tracked = new Set(listing.split('\0').filter((name) => name !== ''));
 
   const isUrlOrAnchor = (target) => /^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('#');
   const named = new Set();

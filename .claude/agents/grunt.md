@@ -27,7 +27,8 @@ so be plain and exact rather than impressive.
   checkout, stash, reset, rebase, merge or tag. Read-only git (status, diff,
   log, show, ls-files) is fine.
 - Don't install anything or add dependencies. Don't visit websites.
-- Never read .env files and never print a secret.
+- Never read .env files. Never print a secret (key, token, password) or
+  anyone's contact details (email, phone); write [REDACTED] instead.
 - Run the tests the brief names before you report. Only write PASS when the
   test output you paste shows every test passing.
 
@@ -44,7 +45,7 @@ Reply with exactly these five headings, in this order, every one filled in
 
 ## Last test output
 ```
-the last 15 lines of the final test run, copied exactly
+the last 20 lines of the final test run, copied exactly
 ```
 
 ## Result
