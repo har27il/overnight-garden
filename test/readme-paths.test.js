@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const HOME_ONLY_NAMES = new Set(['garden.json', 'presence.json', 'settings.json', 'card.html']);
 
 test('a stranger can start from the README: every file it names is really in the repo', (t) => {
-  const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const repoRoot = fileURLToPath(new URL('..', import.meta.url));
   const readme = readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
   let listing;
   try {
@@ -21,23 +21,36 @@ test('a stranger can start from the README: every file it names is really in the
       stdio: ['ignore', 'pipe', 'ignore'],
     });
   } catch {
-    // A ZIP download or a machine without git has no list of tracked files to check against.
-    t.skip('not a git checkout, so there is no list of tracked files to compare with');
-    return;
+    listing = '';
   }
   const tracked = new Set(listing.split('\0').filter((name) => name !== ''));
+  if (!tracked.has('README.md')) {
+    // A ZIP download, a machine without git, or a copy inside some other git folder.
+    t.skip('not a git checkout of this repo, so there is no list of tracked files to compare with');
+    return;
+  }
 
-  const isUrlOrAnchor = (target) => /^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('#');
+  const isUrl = (name) => /^[a-z][a-z0-9+.-]*:/i.test(name);
   const named = new Set();
-  const addTarget = (target) => {
-    if (isUrlOrAnchor(target)) return;
-    named.add(target.includes('#') ? target.slice(0, target.indexOf('#')) : target);
+  const add = (name) => {
+    const clean = name.replace(/^\.\//, '').split('#')[0];
+    if (clean !== '' && !isUrl(clean)) named.add(clean);
   };
 
-  for (const match of readme.matchAll(/\]\(([^)\s]+)/g)) addTarget(match[1]);
-  for (const match of readme.matchAll(/src="([^"]+)"/g)) addTarget(match[1]);
-  for (const match of readme.matchAll(/`([^`\s]+)`/g)) {
-    if (/\.[A-Za-z0-9]+$/.test(match[1])) named.add(match[1]);
+  // Links and images: the target is a file name, with or without an extension (like LICENSE).
+  for (const match of readme.matchAll(/\]\(([^)\s]+)/g)) add(match[1]);
+  for (const match of readme.matchAll(/src="([^"]+)"/g)) add(match[1]);
+
+  // Code, both blocks and inline: every word that ends in a file extension, so commands
+  // like `node scripts/install.js` are checked too.
+  const code = [];
+  const prose = readme.replace(/```[^\n]*\n([\s\S]*?)```/g, (_, body) => {
+    code.push(body);
+    return '';
+  });
+  for (const match of prose.matchAll(/`([^`\n]+)`/g)) code.push(match[1]);
+  for (const word of code.join(' ').split(/\s+/)) {
+    if (/\.[A-Za-z0-9]+$/.test(word)) add(word);
   }
 
   const names = [...named].filter((name) => !name.startsWith('~/') && !HOME_ONLY_NAMES.has(name));

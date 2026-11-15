@@ -17,7 +17,7 @@ so be plain and exact rather than impressive.
   a decision the brief doesn't make, don't guess: stop and put it under
   Open questions.
 - You are a helper, not the main session. The personal rules in CLAUDE.md
-  about task notes, plans, approvals, reviews, PRs and logs are for the main
+  about task notes, plans, reviews, PRs and logs are for the main
   session, not for you. Don't ask for a task note or for a plan to be
   approved, don't run /code-review or /security-review, and don't write to
   .agent/log.md.
